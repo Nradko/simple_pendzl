@@ -36,16 +36,16 @@ impl AccessControlStorage for Data {
     }
 }
 
-pub trait AccessControlImpl: AccessControlInternal + Sized {
-    fn has_role_impl(&self, role: RoleType, address: Option<AccountId>) -> bool {
+pub trait AccessControlDefaultImpl: AccessControlInternal + Sized {
+    fn has_role_default_impl(&self, role: RoleType, address: Option<AccountId>) -> bool {
         self._has_role(role, address)
     }
 
-    fn get_role_admin_impl(&self, role: RoleType) -> RoleType {
+    fn get_role_admin_default_impl(&self, role: RoleType) -> RoleType {
         self._get_role_admin(role)
     }
 
-    fn grant_role_impl(
+    fn grant_role_default_impl(
         &mut self,
         role: RoleType,
         account: Option<AccountId>,
@@ -57,7 +57,7 @@ pub trait AccessControlImpl: AccessControlInternal + Sized {
         Ok(())
     }
 
-    fn revoke_role_impl(
+    fn revoke_role_default_impl(
         &mut self,
         role: RoleType,
         account: Option<AccountId>,
@@ -67,7 +67,7 @@ pub trait AccessControlImpl: AccessControlInternal + Sized {
         Ok(())
     }
 
-    fn renounce_role_impl(
+    fn renounce_role_default_impl(
         &mut self,
         role: RoleType,
         account: Option<AccountId>,
@@ -80,19 +80,19 @@ pub trait AccessControlImpl: AccessControlInternal + Sized {
     }
 }
 
-pub trait AccessControlInternalImpl: Storage<Data>
+pub trait AccessControlInternalDefaultImpl: Storage<Data>
 where
     Data: AccessControlStorage,
 {
-    fn _default_admin_impl() -> RoleType {
+    fn _default_admin_default_impl() -> RoleType {
         DEFAULT_ADMIN_ROLE
     }
 
-    fn _has_role_impl(&self, role: RoleType, account: Option<AccountId>) -> bool {
+    fn _has_role_default_impl(&self, role: RoleType, account: Option<AccountId>) -> bool {
         self.data().has_role(role, &account)
     }
 
-    fn _grant_role_impl(
+    fn _grant_role_default_impl(
         &mut self,
         role: RoleType,
         grantee: Option<AccountId>,
@@ -110,12 +110,12 @@ where
         Ok(())
     }
 
-    fn _do_revoke_role_impl(
+    fn _do_revoke_role_default_impl(
         &mut self,
         role: RoleType,
         account: Option<AccountId>,
     ) -> Result<(), AccessControlError> {
-        self._ensure_has_role_impl(role, account)?;
+        self._ensure_has_role_default_impl(role, account)?;
         self.data().remove(role, &account);
         let sender = Self::env().caller();
         Self::env().emit_event(RoleRevoked {
@@ -126,8 +126,8 @@ where
         Ok(())
     }
 
-    fn _set_role_admin_impl(&mut self, role: RoleType, new: RoleType) {
-        let previous = self._get_role_admin_impl(role);
+    fn _set_role_admin_default_impl(&mut self, role: RoleType, new: RoleType) {
+        let previous = self._get_role_admin_default_impl(role);
         if new != previous {
             self.data().set_role_admin(role, new);
             Self::env().emit_event(RoleAdminChanged {
@@ -138,7 +138,7 @@ where
         }
     }
 
-    fn _ensure_has_role_impl(
+    fn _ensure_has_role_default_impl(
         &self,
         role: RoleType,
         account: Option<AccountId>,
@@ -149,9 +149,9 @@ where
         Ok(())
     }
 
-    fn _get_role_admin_impl(&self, role: RoleType) -> RoleType {
+    fn _get_role_admin_default_impl(&self, role: RoleType) -> RoleType {
         self.data()
             .get_role_admin(role)
-            .unwrap_or(Self::_default_admin_impl())
+            .unwrap_or(Self::_default_admin_default_impl())
     }
 }

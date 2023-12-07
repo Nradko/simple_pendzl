@@ -1,7 +1,8 @@
 {
     "rust-analyzer.linkedProjects": [
-        "./Cargo.toml",
+        // "./Cargo.toml",
         "./contracts/Cargo.toml",
+        // "./examples/just_ownable/Cargo.toml"
         
         // "./examples/access_control/Cargo.toml",
         // "./examples/access_control_extensions/enumerable/Cargo.toml",

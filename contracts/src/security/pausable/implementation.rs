@@ -20,22 +20,22 @@ impl PausableStorage for Data {
     }
 }
 
-pub trait PausableImpl: PausableInternal {
-    fn paused_impl(&self) -> bool {
+pub trait PausableDefaultImpl: PausableInternal {
+    fn paused_default_impl(&self) -> bool {
         self._paused()
     }
 }
 
-pub trait PausableInternalImpl: Storage<Data>
+pub trait PausableInternalDefaultImpl: Storage<Data>
 where
     Data: PausableStorage,
 {
-    fn _paused_impl(&self) -> bool {
+    fn _paused_default_impl(&self) -> bool {
         self.data().paused()
     }
 
-    fn _pause_impl(&mut self) -> Result<(), PausableError> {
-        self._ensure_not_paused_impl()?;
+    fn _pause_default_impl(&mut self) -> Result<(), PausableError> {
+        self._ensure_not_paused_default_impl()?;
         self.data().set_paused(true);
         let account = Self::env().caller();
         Self::env().emit_event(Paused {
@@ -44,8 +44,8 @@ where
         Ok(())
     }
 
-    fn _unpause_impl(&mut self) -> Result<(), PausableError> {
-        self._ensure_paused_impl()?;
+    fn _unpause_default_impl(&mut self) -> Result<(), PausableError> {
+        self._ensure_paused_default_impl()?;
         self.data().set_paused(false);
         Self::env().emit_event(Unpaused {
             account: Self::env().caller(),
@@ -53,7 +53,7 @@ where
         Ok(())
     }
 
-    fn _ensure_paused_impl(&self) -> Result<(), PausableError> {
+    fn _ensure_paused_default_impl(&self) -> Result<(), PausableError> {
         if !self.data().paused.get_or_default() {
             return Err(From::from(PausableError::NotPaused));
         }
@@ -61,7 +61,7 @@ where
         Ok(())
     }
 
-    fn _ensure_not_paused_impl(&self) -> Result<(), PausableError> {
+    fn _ensure_not_paused_default_impl(&self) -> Result<(), PausableError> {
         if self.data().paused.get_or_default() {
             return Err(From::from(PausableError::Paused));
         }

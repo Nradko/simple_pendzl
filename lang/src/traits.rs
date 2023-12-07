@@ -53,7 +53,7 @@ pub trait DefaultEnv {
 
 impl<T> DefaultEnv for T {}
 
-/// Implementation of the trait means that the type stores some `Data` inside.
+/// DefaultImplementation of the trait means that the type stores some `Data` inside.
 /// It is stored in one exemplar, and reference can be retrieved from the object by `get` or
 /// `get_mut` methods. The trait is helpful for generics implementations when you don't know
 /// precisely the final type, but it is enough for you to know that it has some `Data` inside.

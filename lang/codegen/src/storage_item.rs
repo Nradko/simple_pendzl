@@ -20,30 +20,25 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use proc_macro2::TokenStream;
-use quote::{
-    format_ident,
-    quote,
-    quote_spanned,
-    ToTokens,
-};
-use syn::{
-    spanned::Spanned,
-    Data,
-    DataEnum,
-    DataStruct,
-    DataUnion,
-    Field,
-    Fields,
-};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::{spanned::Spanned, Data, DataEnum, DataStruct, DataUnion, Field, Fields};
 
 #[inline]
 pub(crate) fn is_attr(attrs: &[syn::Attribute], ident: &str) -> bool {
-    attrs
-        .iter()
-        .any(|attr| attr.path.segments.last().expect("No segments in path").ident == ident)
+    attrs.iter().any(|attr| {
+        attr.path
+            .segments
+            .last()
+            .expect("No segments in path")
+            .ident
+            == ident
+    })
 }
 
-fn wrap_upgradeable_fields(structure_name: &str, fields: Fields) -> (Vec<Field>, Vec<Option<TokenStream>>) {
+fn wrap_upgradeable_fields(
+    structure_name: &str,
+    fields: Fields,
+) -> (Vec<Field>, Vec<Option<TokenStream>>) {
     fields
         .iter()
         .map(|field| {
@@ -132,7 +127,10 @@ fn generate_struct(s: &synstructure::Structure, struct_item: DataStruct) -> Toke
     let attrs = s.ast().attrs.clone();
     let (_, _, where_closure) = s.ast().generics.split_for_impl();
 
-    let (fields, storage_keys) = wrap_upgradeable_fields(struct_ident.to_string().as_str(), struct_item.fields.clone());
+    let (fields, storage_keys) = wrap_upgradeable_fields(
+        struct_ident.to_string().as_str(),
+        struct_item.fields.clone(),
+    );
 
     match struct_item.fields {
         Fields::Unnamed(_) => {
@@ -211,7 +209,12 @@ fn generate_union(s: &synstructure::Structure, union_item: DataUnion) -> TokenSt
     let types = s.ast().generics.clone();
     let (_, _, where_closure) = s.ast().generics.split_for_impl();
 
-    let fields = union_item.fields.named.iter().enumerate().map(|(_i, field)| field);
+    let fields = union_item
+        .fields
+        .named
+        .iter()
+        .enumerate()
+        .map(|(_i, field)| field);
 
     quote! {
         #(#attrs)*

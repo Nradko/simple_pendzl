@@ -97,20 +97,20 @@ impl PSP22Storage for Data {
     }
 }
 
-pub trait PSP22Impl: DefaultEnv + PSP22Internal {
-    fn total_supply_impl(&self) -> Balance {
+pub trait PSP22DefaultImpl: DefaultEnv + PSP22Internal {
+    fn total_supply_default_impl(&self) -> Balance {
         self._total_supply()
     }
 
-    fn balance_of_impl(&self, owner: AccountId) -> Balance {
+    fn balance_of_default_impl(&self, owner: AccountId) -> Balance {
         self._balance_of(&owner)
     }
 
-    fn allowance_impl(&self, owner: AccountId, spender: AccountId) -> Balance {
+    fn allowance_default_impl(&self, owner: AccountId, spender: AccountId) -> Balance {
         self._allowance(&owner, &spender)
     }
 
-    fn transfer_impl(
+    fn transfer_default_impl(
         &mut self,
         to: AccountId,
         value: Balance,
@@ -121,7 +121,7 @@ pub trait PSP22Impl: DefaultEnv + PSP22Internal {
         Ok(())
     }
 
-    fn transfer_from_impl(
+    fn transfer_from_default_impl(
         &mut self,
         from: AccountId,
         to: AccountId,
@@ -134,13 +134,13 @@ pub trait PSP22Impl: DefaultEnv + PSP22Internal {
         Ok(())
     }
 
-    fn approve_impl(&mut self, spender: AccountId, value: Balance) -> Result<(), PSP22Error> {
+    fn approve_default_impl(&mut self, spender: AccountId, value: Balance) -> Result<(), PSP22Error> {
         let owner = Self::env().caller();
         self._approve(&owner, &spender, &value)?;
         Ok(())
     }
 
-    fn increase_allowance_impl(
+    fn increase_allowance_default_impl(
         &mut self,
         spender: AccountId,
         delta_value: Balance,
@@ -149,7 +149,7 @@ pub trait PSP22Impl: DefaultEnv + PSP22Internal {
         self._increase_allowance_from_to(&owner, &spender, &delta_value)
     }
 
-    fn decrease_allowance_impl(
+    fn decrease_allowance_default_impl(
         &mut self,
         spender: AccountId,
         delta_value: Balance,
@@ -159,23 +159,23 @@ pub trait PSP22Impl: DefaultEnv + PSP22Internal {
     }
 }
 
-pub trait PSP22InternalImpl: Storage<Data>
+pub trait PSP22InternalDefaultImpl: Storage<Data>
 where
     Data: PSP22Storage,
 {
-    fn _total_supply_impl(&self) -> Balance {
+    fn _total_supply_default_impl(&self) -> Balance {
         self.data().total_supply()
     }
 
-    fn _balance_of_impl(&self, owner: &AccountId) -> Balance {
+    fn _balance_of_default_impl(&self, owner: &AccountId) -> Balance {
         self.data().balance_of(owner)
     }
 
-    fn _allowance_impl(&self, owner: &AccountId, spender: &AccountId) -> Balance {
+    fn _allowance_default_impl(&self, owner: &AccountId, spender: &AccountId) -> Balance {
         self.data().allowance(owner, spender)
     }
 
-    fn _update_impl(
+    fn _update_default_impl(
         &mut self,
         from: Option<&AccountId>,
         to: Option<&AccountId>,
@@ -200,7 +200,7 @@ where
         });
         Ok(())
     }
-    fn _approve_impl(
+    fn _approve_default_impl(
         &mut self,
         owner: &AccountId,
         spender: &AccountId,
@@ -215,7 +215,7 @@ where
         Ok(())
     }
 
-    fn _decrease_allowance_from_to_impl(
+    fn _decrease_allowance_from_to_default_impl(
         &mut self,
         owner: &AccountId,
         spender: &AccountId,
@@ -229,7 +229,7 @@ where
         });
         Ok(())
     }
-    fn _increase_allowance_from_to_impl(
+    fn _increase_allowance_from_to_default_impl(
         &mut self,
         owner: &AccountId,
         spender: &AccountId,

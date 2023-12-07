@@ -21,11 +21,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
-use pendzl_lang_codegen::{
-    implementation,
-    storage_derive,
-    storage_item,
-};
+use pendzl_lang_codegen::{implementation, storage_derive, storage_item};
 use proc_macro::TokenStream;
 
 /// The macro implements `pendzl::traits::Storage`
@@ -48,8 +44,8 @@ pub fn storage_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
 }
 
 ////This macro implements the default traits defined in pendzl, while also allowing users
-////to override them with `#[overrider]` or `#[default_impl]` attributes. `#[overrider]` is used when
-////you want to change the behavior of the method by your implementation. `#[default_impl]` is used when
+////to override them with `#[overrider]` or `#[default_default_impl]` attributes. `#[overrider]` is used when
+////you want to change the behavior of the method by your implementation. `#[default_default_impl]` is used when
 ////you want to keep the default implementation from pendzl, but you want to attach some modifiers to
 ////that function.
 ////# Example
@@ -87,7 +83,7 @@ pub fn storage_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
 ////    // however, it will add the modifier (and possibly other attributes defined by user)
 ////    // to the function. In this case, we don't even have to worry about the attributes and
 ////    // return type of the function
-////    #[default_impl(PSP22)]
+////    #[default_default_impl(PSP22)]
 ////    #[modifiers(...)]
 ////    fn transfer_from() {}
 ////

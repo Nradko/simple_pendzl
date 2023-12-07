@@ -33,7 +33,7 @@ pub mod my_psp22 {
         if to == Some(&self.hated_storage.hated_account) {
             return Err(PSP22Error::Custom(String::from("I hate this account!")));
         }
-        self._update_impl(from, to, amount)
+        self._update_default_impl(from, to, amount)
     }
 
     impl Contract {

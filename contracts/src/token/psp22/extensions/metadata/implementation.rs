@@ -15,16 +15,16 @@ pub struct Data {
     pub decimals: u8,
 }
 
-pub trait PSP22MetadataImpl: Storage<Data> {
-    fn token_name_impl(&self) -> Option<String> {
+pub trait PSP22MetadataDefaultImpl: Storage<Data> {
+    fn token_name_default_impl(&self) -> Option<String> {
         self.data().name.get_or_default()
     }
 
-    fn token_symbol_impl(&self) -> Option<String> {
+    fn token_symbol_default_impl(&self) -> Option<String> {
         self.data().symbol.get_or_default()
     }
 
-    fn token_decimals_impl(&self) -> u8 {
+    fn token_decimals_default_impl(&self) -> u8 {
         self.data().decimals.get_or_default()
     }
 }

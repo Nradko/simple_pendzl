@@ -21,7 +21,7 @@ pendzl = { path = "../..", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-ink_e2e = "4.3.0"
+ink_e2e = "5.0.0-rc"
 test_helpers = { path = "../test_helpers", default-features = false }
 
 [lib]

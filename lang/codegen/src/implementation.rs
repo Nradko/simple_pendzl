@@ -64,14 +64,16 @@ pub fn generate(attrs: TokenStream, ink_module: TokenStream) -> TokenStream {
 
     let mut impl_args = ImplArgs::new(&map, &mut items, &mut imports, &mut overriden_traits, ident);
 
-    for to_implement in &args {
-        match to_implement.as_str() {
+    for to_default_implement in &args {
+        match to_default_implement.as_str() {
             "PSP22" => impl_psp22(&mut impl_args),
             "PSP22Metadata" => impl_psp22_metadata(&mut impl_args),
+            "PSP34" => impl_psp34(&mut impl_args),
+            "PSP34Metadata" => impl_psp34_metadata(&mut impl_args),
             "Ownable" => impl_ownable(&mut impl_args),
             "AccessControl" => impl_access_control(&mut impl_args),
             "Pausable" => impl_pausable(&mut impl_args),
-            _ => panic!("pendzl::implementation({to_implement}) not implemented!"),
+            _ => panic!("pendzl::implementation({to_default_implement}) not implemented!"),
         }
     }
 
@@ -107,7 +109,7 @@ pub fn generate(attrs: TokenStream, ink_module: TokenStream) -> TokenStream {
 
 fn cleanup_imports(imports: &mut HashMap<&str, syn::ItemUse>) {
     // we will remove unnecessary imports
-    let psp22_impls = vec![
+    let psp22_default_impls = vec![
         "PSP22Mintable",
         "PSP22Burnable",
         "PSP22Capped",
@@ -116,27 +118,27 @@ fn cleanup_imports(imports: &mut HashMap<&str, syn::ItemUse>) {
         "PSP22Permit",
         "Flashmint",
     ];
-    check_and_remove_import("PSP22", psp22_impls, imports);
+    check_and_remove_import("PSP22", psp22_default_impls, imports);
 
-    let psp34_impls = vec![
+    let psp34_default_impls = vec![
         "PSP34Mintable",
         "PSP34Burnable",
         "PSP34Metadata",
         "PSP34Enumerable",
     ];
-    check_and_remove_import("PSP34", psp34_impls, imports);
+    check_and_remove_import("PSP34", psp34_default_impls, imports);
 
-    let psp37_impls = vec![
+    let psp37_default_impls = vec![
         "PSP37Batch",
         "PSP37Burnable",
         "PSP37Metadata",
         "PSP37Mintable",
         "PSP37Enumerable",
     ];
-    check_and_remove_import("PSP37", psp37_impls, imports);
+    check_and_remove_import("PSP37", psp37_default_impls, imports);
 
-    let access_impls = vec!["AccessControlEnumerable", "TimelockController"];
-    check_and_remove_import("AccessControl", access_impls, imports);
+    let access_default_impls = vec!["AccessControlEnumerable", "TimelockController"];
+    check_and_remove_import("AccessControl", access_default_impls, imports);
 
     check_and_remove_import("Diamond", vec!["DiamondLoupe"], imports);
 }
@@ -158,11 +160,13 @@ fn consume_overriders(items: Vec<syn::Item>) -> (OverridenFnMap, Vec<syn::Item>)
     let mut result: Vec<syn::Item> = vec![];
     items.into_iter().for_each(|mut item| {
         if let Item::Fn(item_fn) = &mut item {
-            if is_attr(&item_fn.attrs, "overrider") || is_attr(&item_fn.attrs, "default_impl") {
+            if is_attr(&item_fn.attrs, "overrider")
+                || is_attr(&item_fn.attrs, "default_default_impl")
+            {
                 let attr_name = if is_attr(&item_fn.attrs, "overrider") {
                     "overrider"
                 } else {
-                    "default_impl"
+                    "default_default_impl"
                 };
                 let fn_name = item_fn.sig.ident.to_string();
                 let code = item_fn.block.clone();
@@ -183,7 +187,10 @@ fn consume_overriders(items: Vec<syn::Item>) -> (OverridenFnMap, Vec<syn::Item>)
                     .replace(' ', "");
 
                 let mut vec = map.get(&trait_name).unwrap_or(&vec![]).clone();
-                vec.push((fn_name, (code, attributes, attr_name == "default_impl")));
+                vec.push((
+                    fn_name,
+                    (code, attributes, attr_name == "default_default_impl"),
+                ));
                 map.insert(trait_name, vec.to_vec());
             } else {
                 result.push(item);
@@ -196,7 +203,7 @@ fn consume_overriders(items: Vec<syn::Item>) -> (OverridenFnMap, Vec<syn::Item>)
     (map, result)
 }
 
-fn extract_storage_struct_name(items: &[syn::Item]) -> String {
+pub fn extract_storage_struct_name(items: &[syn::Item]) -> String {
     let contract_storage_struct = items
         .iter()
         .find(|item| {

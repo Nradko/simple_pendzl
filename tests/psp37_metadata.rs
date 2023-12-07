@@ -23,14 +23,8 @@
 #[pendzl::implementation(PSP37, PSP37Metadata)]
 #[ink::contract]
 mod psp37_metadata {
-    use ink::codegen::{
-        EmitEvent,
-        Env,
-    };
-    use pendzl::traits::{
-        Storage,
-        String,
-    };
+    use ink::codegen::{EmitEvent, Env};
+    use pendzl::traits::{Storage, String};
 
     #[ink(event)]
     pub struct AttributeSet {
@@ -49,7 +43,7 @@ mod psp37_metadata {
     }
 
     #[overrider(metadata::Internal)]
-    fn _emit_attribute_set_event(&self, id: &Id, key: &String, data: &String) {
+    fn _emit_attribute_set_event(&self, id: Id, key: String, data: String) {
         self.env().emit_event(AttributeSet {
             id: id.clone(),
             key: key.to_string(),
@@ -64,8 +58,13 @@ mod psp37_metadata {
         }
 
         #[ink(message)]
-        pub fn set_attribute(&mut self, id: Id, key: String, data: String) -> Result<(), PSP37Error> {
-            metadata::Internal::_set_attribute(self, &id, &key, &data)
+        pub fn set_attribute(
+            &mut self,
+            id: Id,
+            key: String,
+            data: String,
+        ) -> Result<(), PSP37Error> {
+            metadata::Internal::_set_attribute(self, id, &key, &data)
         }
     }
 

@@ -25,10 +25,7 @@
 mod psp34_burnable {
     use pendzl::{
         test_utils::accounts,
-        traits::{
-            Storage,
-            String,
-        },
+        traits::{Storage, String},
     };
 
     #[derive(Default, Storage)]
@@ -47,10 +44,12 @@ mod psp34_burnable {
         &mut self,
         _from: Option<&AccountId>,
         _to: Option<&AccountId>,
-        _id: &Id,
+        _id: Id,
     ) -> Result<(), PSP34Error> {
         if self.return_err_on_before {
-            return Err(PSP34Error::Custom(String::from("Error on _before_token_transfer")))
+            return Err(PSP34Error::Custom(String::from(
+                "Error on _before_token_transfer",
+            )));
         }
         Ok(())
     }
@@ -60,10 +59,12 @@ mod psp34_burnable {
         &mut self,
         _from: Option<&AccountId>,
         _to: Option<&AccountId>,
-        _id: &Id,
+        _id: Id,
     ) -> Result<(), PSP34Error> {
         if self.return_err_on_after {
-            return Err(PSP34Error::Custom(String::from("Error on _after_token_transfer")))
+            return Err(PSP34Error::Custom(String::from(
+                "Error on _after_token_transfer",
+            )));
         }
         Ok(())
     }
@@ -129,7 +130,9 @@ mod psp34_burnable {
         // Alice gets an error on _before_token_transfer
         assert_eq!(
             PSP34Burnable::burn(&mut nft, accounts.alice, Id::U8(2u8)),
-            Err(PSP34Error::Custom(String::from("Error on _before_token_transfer")))
+            Err(PSP34Error::Custom(String::from(
+                "Error on _before_token_transfer"
+            )))
         );
     }
 
@@ -149,7 +152,9 @@ mod psp34_burnable {
         // Alice gets an error on _after_token_transfer
         assert_eq!(
             PSP34Burnable::burn(&mut nft, accounts.alice, Id::U8(2u8)),
-            Err(PSP34Error::Custom(String::from("Error on _after_token_transfer")))
+            Err(PSP34Error::Custom(String::from(
+                "Error on _after_token_transfer"
+            )))
         );
     }
 }

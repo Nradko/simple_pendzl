@@ -1,4 +1,3 @@
 // SPDX-License-Identifier: MIT
 
-pub mod psp22;
-pub mod psp34;
+include!("mintable_trait.rs");

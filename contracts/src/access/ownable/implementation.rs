@@ -20,37 +20,37 @@ impl OwnableStorage for Data {
     }
 }
 
-pub trait OwnableImpl: OwnableInternal {
-    fn owner_impl(&self) -> Option<AccountId> {
+pub trait OwnableDefaultImpl: OwnableInternal {
+    fn owner_default_impl(&self) -> Option<AccountId> {
         self._owner()
     }
 
-    fn renounce_ownership_impl(&mut self) -> Result<(), OwnableError> {
+    fn renounce_ownership_default_impl(&mut self) -> Result<(), OwnableError> {
         self._only_owner()?;
         self._update_owner(&None);
         Ok(())
     }
 
-    fn transfer_ownership_impl(&mut self, new_owner: AccountId) -> Result<(), OwnableError> {
+    fn transfer_ownership_default_impl(&mut self, new_owner: AccountId) -> Result<(), OwnableError> {
         self._only_owner()?;
         self._update_owner(&Some(new_owner));
         Ok(())
     }
 }
 
-pub trait OwnableInternalImpl: Storage<Data>
+pub trait OwnableInternalDefaultImpl: Storage<Data>
 where
     Data: OwnableStorage,
 {
-    fn _owner_impl(&self) -> Option<AccountId> {
+    fn _owner_default_impl(&self) -> Option<AccountId> {
         self.data().owner()
     }
-    fn _update_owner_impl(&mut self, new: &Option<AccountId>) {
+    fn _update_owner_default_impl(&mut self, new: &Option<AccountId>) {
         self.data().set_owner(new);
         Self::env().emit_event(OwnershipTransferred { new: *new });
     }
 
-    fn _only_owner_impl(&self) -> Result<(), OwnableError> {
+    fn _only_owner_default_impl(&self) -> Result<(), OwnableError> {
         if Some(Self::env().caller()) != self.data().owner.get_or_default() {
             return Err(OwnableError::CallerIsNotOwner);
         }

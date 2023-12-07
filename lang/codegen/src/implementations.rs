@@ -54,23 +54,23 @@ impl<'a> ImplArgs<'a> {
 
 pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
     let storage_struct_name = impl_args.contract_name();
-    let internal_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::token::psp22::implementation::PSP22InternalImpl for #storage_struct_name {}
+    let internal_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
     let mut internal = syn::parse2::<syn::ItemImpl>(quote!(
         impl  pendzl::contracts::token::psp22::PSP22Internal for #storage_struct_name {
             fn _total_supply(&self) -> Balance {
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_total_supply_impl(self)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_total_supply_default_impl(self)
             }
 
             fn _balance_of(&self, owner: &AccountId) -> Balance {
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_balance_of_impl(self, owner)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_balance_of_default_impl(self, owner)
             }
 
             fn _allowance(&self, owner: &AccountId, spender: &AccountId) -> Balance {
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_allowance_impl(self, owner, spender)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_allowance_default_impl(self, owner, spender)
             }
 
             fn _update(
@@ -79,7 +79,7 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
                 to: Option<&AccountId>,
                 amount: &Balance,
             ) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_update_impl(self, from, to, amount)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_update_default_impl(self, from, to, amount)
             }
 
             fn _approve(
@@ -88,7 +88,7 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
                 spender: &AccountId,
                 amount: &Balance,
             ) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_approve_impl(self, owner, spender, amount)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_approve_default_impl(self, owner, spender, amount)
             }
 
             fn _decrease_allowance_from_to(
@@ -97,7 +97,7 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
                 spender: &AccountId,
                 amount: &Balance,
             ) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_decrease_allowance_from_to_impl(self, owner, spender, amount)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_decrease_allowance_from_to_default_impl(self, owner, spender, amount)
             }
 
             fn _increase_allowance_from_to(
@@ -106,15 +106,15 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
                 spender: &AccountId,
                 amount: &Balance,
             ) -> Result<(), PSP22Error>{
-                pendzl::contracts::token::psp22::implementation::PSP22InternalImpl::_increase_allowance_from_to_impl(self, owner, spender, amount)
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_increase_allowance_from_to_default_impl(self, owner, spender, amount)
 
             }
         }
     ))
     .expect("Should parse");
 
-    let psp22_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::token::psp22::implementation::PSP22Impl for #storage_struct_name {}
+    let psp22_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
@@ -122,22 +122,22 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
         impl pendzl::contracts::token::psp22::PSP22 for #storage_struct_name {
             #[ink(message)]
             fn total_supply(&self) -> Balance {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::total_supply_impl(self)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::total_supply_default_impl(self)
             }
 
             #[ink(message)]
             fn balance_of(&self, owner: AccountId) -> Balance {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::balance_of_impl(self, owner)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::balance_of_default_impl(self, owner)
             }
 
             #[ink(message)]
             fn allowance(&self, owner: AccountId, spender: AccountId) -> Balance {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::allowance_impl(self, owner, spender)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::allowance_default_impl(self, owner, spender)
             }
 
             #[ink(message)]
             fn transfer(&mut self, to: AccountId, value: Balance, data: Vec<u8>) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::transfer_impl(self, to, value, data)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::transfer_default_impl(self, to, value, data)
             }
 
             #[ink(message)]
@@ -148,22 +148,22 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
                 value: Balance,
                 data: Vec<u8>,
             ) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::transfer_from_impl(self, from, to, value, data)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::transfer_from_default_impl(self, from, to, value, data)
             }
 
             #[ink(message)]
             fn approve(&mut self, spender: AccountId, value: Balance) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::approve_impl(self, spender, value)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::approve_default_impl(self, spender, value)
             }
 
             #[ink(message)]
             fn increase_allowance(&mut self, spender: AccountId, delta_value: Balance) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::increase_allowance_impl(self, spender, delta_value)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::increase_allowance_default_impl(self, spender, delta_value)
             }
 
             #[ink(message)]
             fn decrease_allowance(&mut self, spender: AccountId, delta_value: Balance) -> Result<(), PSP22Error> {
-                pendzl::contracts::token::psp22::implementation::PSP22Impl::decrease_allowance_impl(self, spender, delta_value)
+                pendzl::contracts::token::psp22::implementation::PSP22DefaultImpl::decrease_allowance_default_impl(self, spender, delta_value)
             }
         }
     ))
@@ -184,22 +184,22 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
     impl_args.vec_import();
 
     override_functions(
-        "PSP22InternalImpl",
+        "PSP22InternalDefaultImpl",
         &mut internal,
         impl_args.map,
     );
     override_functions("PSP22", &mut psp22, impl_args.map);
 
-    impl_args.items.push(syn::Item::Impl(internal_impl));
+    impl_args.items.push(syn::Item::Impl(internal_default_impl));
     impl_args.items.push(syn::Item::Impl(internal));
-    impl_args.items.push(syn::Item::Impl(psp22_impl));
+    impl_args.items.push(syn::Item::Impl(psp22_default_impl));
     impl_args.items.push(syn::Item::Impl(psp22));
 }
 
 
 pub(crate) fn impl_psp22_metadata(impl_args: &mut ImplArgs) {
     let storage_struct_name = impl_args.contract_name();
-    let metadata_impl = syn::parse2::<syn::ItemImpl>(quote!(
+    let metadata_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
         impl pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
@@ -208,17 +208,17 @@ pub(crate) fn impl_psp22_metadata(impl_args: &mut ImplArgs) {
         impl pendzl::contracts::token::psp22::extensions::metadata::PSP22Metadata for #storage_struct_name {
             #[ink(message)]
             fn token_name(&self) -> Option<String> {
-                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_name_impl(self)
+                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_name_default_impl(self)
             }
 
             #[ink(message)]
             fn token_symbol(&self) -> Option<String> {
-                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_symbol_impl(self)
+                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_symbol_default_impl(self)
             }
 
             #[ink(message)]
             fn token_decimals(&self) -> u8 {
-                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_decimals_impl(self)
+                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_decimals_default_impl(self)
             }
         }
     ))
@@ -239,35 +239,216 @@ pub(crate) fn impl_psp22_metadata(impl_args: &mut ImplArgs) {
 
     override_functions("PSP22Metadata", &mut metadata, impl_args.map);
 
-    impl_args.items.push(syn::Item::Impl(metadata_impl));
+    impl_args.items.push(syn::Item::Impl(metadata_default_impl));
+    impl_args.items.push(syn::Item::Impl(metadata));
+}
+
+
+pub(crate) fn impl_psp34(impl_args: &mut ImplArgs) {
+    let storage_struct_name = impl_args.contract_name();
+    let internal_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl for #storage_struct_name {}
+    ))
+    .expect("Should parse");
+
+    let mut internal = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::PSP34Internal for #storage_struct_name {
+            fn _balance_of(&self, owner: &AccountId) -> u32 {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_balance_of_default_impl(self, owner)
+            }
+
+            fn _total_supply(&self) -> u64 {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_total_supply_default_impl(self)
+            }
+
+            fn _owner_of(&self, id: &Id) -> Option<AccountId> {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_owner_of_default_impl(self,id)
+            }
+            
+            fn _allowance(&self, owner: &Owner, operator: &Operator, id: &Option<Id>) -> bool {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_allowance_default_impl(self, owner, operator, id)
+            }
+            
+            fn _approve(&mut self, owner: &AccountId,operator: &AccountId, id: &Option<Id>, approved: &bool) -> Result<(), PSP34Error> {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_approve_default_impl(self, owner, operator, id, approved)
+            }
+
+            fn _update(
+                &mut self,
+                from: &Option<&AccountId>,
+                to: &Option<&AccountId>,
+                id: &Id,
+            ) -> Result<(), PSP34Error>{
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_update_default_impl(self, from, to, id)
+
+            }
+        
+            fn _transfer(&mut self, from: &AccountId, to: &AccountId, id: &Id, data: &Vec<u8>) -> Result<(), PSP34Error> {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_transfer_default_impl(self, from, to, id, data)
+            }
+
+            fn _mint_to(&mut self, to: &AccountId, id: &Id) -> Result<(), PSP34Error> {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_mint_to_default_impl(self, to, id)
+            }
+
+            fn _burn_from(&mut self, from: &AccountId, id: &Id) -> Result<(), PSP34Error> {
+                pendzl::contracts::token::psp34::implementation::PSP34InternalDefaultImpl::_burn_from_default_impl(self, from, id)
+            }
+
+        }
+    ))
+    .expect("Should parse");
+
+    let psp34_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl for #storage_struct_name {}
+    ))
+    .expect("Should parse");
+
+    let mut psp34 = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::PSP34 for #storage_struct_name {
+            #[ink(message)]
+            fn collection_id(&self) -> Id {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::collection_id_default_impl(self)
+            }
+
+            #[ink(message)]
+            fn balance_of(&self, owner: AccountId) -> u32 {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::balance_of_default_impl(self, owner)
+            }
+
+            #[ink(message)]
+            fn owner_of(&self, id: Id) -> Option<AccountId> {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::owner_of_default_impl(self, id)
+            }
+
+            #[ink(message)]
+            fn allowance(&self, owner: AccountId, operator: AccountId, id: Option<Id>) -> bool {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::allowance_default_impl(self, owner, operator, id)
+            }
+
+            #[ink(message)]
+            fn approve(&mut self, operator: AccountId, id: Option<Id>, approved: bool) -> Result<(), PSP34Error> {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::approve_default_impl(self, operator, id, approved)
+            }
+
+            #[ink(message)]
+            fn transfer(&mut self, to: AccountId, id: Id, data: Vec<u8>) -> Result<(), PSP34Error> {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::transfer_default_impl(self, to, id, data)
+            }
+
+            #[ink(message)]
+            fn total_supply(&self) -> u64 {
+                pendzl::contracts::token::psp34::implementation::PSP34DefaultImpl::total_supply_default_impl(self)
+            }
+        }
+    ))
+    .expect("Should parse");
+
+    let import = syn::parse2::<syn::ItemUse>(quote!(
+        use pendzl::contracts::token::psp34::*;
+    ))
+    .expect("Should parse");
+
+    let import_data = syn::parse2::<syn::ItemUse>(quote!(
+        use pendzl::contracts::token::psp34::implementation::Data as PSP34Data;
+    ))
+    .expect("Should parse import");
+
+    impl_args.imports.insert("PSP34", import);
+    impl_args.imports.insert("PSP34Data", import_data);
+    impl_args.vec_import();
+
+    override_functions("PSP34Internal", &mut internal, impl_args.map);
+    override_functions("PSP34", &mut psp34, impl_args.map);
+
+    // only insert this if it is not present
+    impl_args.items.push(syn::Item::Impl(internal_default_impl));
+    impl_args.items.push(syn::Item::Impl(internal));
+    impl_args.items.push(syn::Item::Impl(psp34_default_impl));
+    impl_args.items.push(syn::Item::Impl(psp34));
+}
+
+pub(crate) fn impl_psp34_metadata(impl_args: &mut ImplArgs) {
+    let storage_struct_name = impl_args.contract_name();
+    let internal_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::extenstions::metadata::implementation::PSP34MetadataInternalDefaultImpl for #storage_struct_name {}
+    ))
+    .expect("Should parse");
+
+    let mut internal = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::extenstions::metadata::Internal for #storage_struct_name {
+
+            fn _set_attribute(&mut self, id: Id, key: String, value: String) {
+                pendzl::contracts::token::psp34::extenstions::metadata::implementation::PSP34MetadataInternalDefaultImpl::_set_attribute_impl(self, id, key, value)
+            }
+        }
+    ))
+    .expect("Should parse");
+
+    let metadata_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::extenstions::metadata::implementation::PSP34MetadataImpl for #storage_struct_name {}
+    ))
+    .expect("Should parse");
+
+    let mut metadata = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::token::psp34::extenstions::metadata::PSP34Metadata for #storage_struct_name {
+            #[ink(message)]
+            fn get_attribute(&self, id: Id, key: String) -> Option<String> {
+                pendzl::contracts::token::psp34::extenstions::metadata::implementation::PSP34MetadataImpl::get_attribute_impl(self, id, key)
+            }
+        }
+    ))
+    .expect("Should parse");
+
+    let import = syn::parse2::<syn::ItemUse>(quote!(
+        use pendzl::contracts::token::psp34::extensions::metadata::*;
+    ))
+    .expect("Should parse");
+
+    let import_data = syn::parse2::<syn::ItemUse>(quote!(
+        use pendzl::contracts::token::psp34::extensions::metadata::implementation::Data as PSP34MetadataData;
+    ))
+    .expect("Should parse import");
+
+    impl_args.imports.insert("PSP34", import);
+    impl_args.imports.insert("PSP34MetadataData", import_data);
+
+    impl_args.vec_import();
+
+    override_functions("PSP34MetadataInternal", &mut internal, impl_args.map);
+    override_functions("PSP34Metadata", &mut metadata, impl_args.map);
+
+    impl_args.items.push(syn::Item::Impl(internal_default_impl));
+    impl_args.items.push(syn::Item::Impl(internal));
+    impl_args.items.push(syn::Item::Impl(metadata_default_impl));
     impl_args.items.push(syn::Item::Impl(metadata));
 }
 
 pub(crate) fn impl_ownable(impl_args: &mut ImplArgs) {
     let storage_struct_name = impl_args.contract_name();
-    let internal_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::access::ownable::implementation::OwnableInternalImpl for #storage_struct_name {}
+    let internal_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::access::ownable::implementation::OwnableInternalDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
     let mut internal = syn::parse2::<syn::ItemImpl>(quote!(
         impl pendzl::contracts::access::ownable::OwnableInternal for #storage_struct_name {
             fn _owner(&self) -> Option<AccountId>{
-                pendzl::contracts::access::ownable::implementation::OwnableInternalImpl::_owner_impl(self)
+                pendzl::contracts::access::ownable::implementation::OwnableInternalDefaultImpl::_owner_default_impl(self)
             }
             fn _update_owner(&mut self, owner: &Option<AccountId>){
-                pendzl::contracts::access::ownable::implementation::OwnableInternalImpl::_update_owner_impl(self, owner);
+                pendzl::contracts::access::ownable::implementation::OwnableInternalDefaultImpl::_update_owner_default_impl(self, owner);
 
             }
             fn _only_owner(&self) -> Result<(), OwnableError> {
-                pendzl::contracts::access::ownable::implementation::OwnableInternalImpl::_only_owner_impl(self)
+                pendzl::contracts::access::ownable::implementation::OwnableInternalDefaultImpl::_only_owner_default_impl(self)
             }
         }
     ))
     .expect("Should parse");
 
-    let ownable_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::access::ownable::implementation::OwnableImpl for #storage_struct_name {}
+    let ownable_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::access::ownable::implementation::OwnableDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
@@ -275,17 +456,17 @@ pub(crate) fn impl_ownable(impl_args: &mut ImplArgs) {
         impl pendzl::contracts::access::ownable::Ownable for #storage_struct_name {
             #[ink(message)]
             fn owner(&self) -> Option<AccountId> {
-                pendzl::contracts::access::ownable::implementation::OwnableImpl::owner_impl(self)
+                pendzl::contracts::access::ownable::implementation::OwnableDefaultImpl::owner_default_impl(self)
             }
 
             #[ink(message)]
             fn renounce_ownership(&mut self) -> Result<(), OwnableError> {
-                pendzl::contracts::access::ownable::implementation::OwnableImpl::renounce_ownership_impl(self)
+                pendzl::contracts::access::ownable::implementation::OwnableDefaultImpl::renounce_ownership_default_impl(self)
             }
 
             #[ink(message)]
             fn transfer_ownership(&mut self, new_owner: AccountId) -> Result<(), OwnableError> {
-                pendzl::contracts::access::ownable::implementation::OwnableImpl::transfer_ownership_impl(self, new_owner)
+                pendzl::contracts::access::ownable::implementation::OwnableDefaultImpl::transfer_ownership_default_impl(self, new_owner)
             }
         }
     ))
@@ -307,55 +488,55 @@ pub(crate) fn impl_ownable(impl_args: &mut ImplArgs) {
     override_functions("ownable::Internal", &mut internal, impl_args.map);
     override_functions("Ownable", &mut ownable, impl_args.map);
 
-    impl_args.items.push(syn::Item::Impl(internal_impl));
+    impl_args.items.push(syn::Item::Impl(internal_default_impl));
     impl_args.items.push(syn::Item::Impl(internal));
-    impl_args.items.push(syn::Item::Impl(ownable_impl));
+    impl_args.items.push(syn::Item::Impl(ownable_default_impl));
     impl_args.items.push(syn::Item::Impl(ownable));
 }
 
 pub(crate) fn impl_access_control(impl_args: &mut ImplArgs) {
     let storage_struct_name = impl_args.contract_name();
-    let internal_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl for #storage_struct_name {}
+    let internal_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
     let mut internal = syn::parse2::<syn::ItemImpl>(quote!(
         impl pendzl::contracts::access::access_control::AccessControlInternal for #storage_struct_name {
             fn _default_admin() -> RoleType {
-                <Self as pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl>::_default_admin_impl()
+                <Self as pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl>::_default_admin_default_impl()
             }
 
             fn _has_role(&self, role: RoleType, account: Option<AccountId>) -> bool{
-                pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl::_has_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl::_has_role_default_impl(self, role, account)
             }
 
             fn _grant_role(&mut self, role: RoleType, account: Option<AccountId>) -> Result<(), AccessControlError> {
-                pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl::_grant_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl::_grant_role_default_impl(self, role, account)
             }
 
             fn _do_revoke_role(&mut self, role: RoleType, account: Option<AccountId>)  -> Result<(), AccessControlError>  {
-                pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl::_do_revoke_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl::_do_revoke_role_default_impl(self, role, account)
             }
             
             fn _get_role_admin(&self, role: RoleType) -> RoleType {
-                pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl::_get_role_admin_impl(self, role)
+                pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl::_get_role_admin_default_impl(self, role)
             }
 
             fn _set_role_admin(&mut self, role: RoleType, new_admin: RoleType) {
-                pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl::_set_role_admin_impl(self, role, new_admin);
+                pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl::_set_role_admin_default_impl(self, role, new_admin);
             }
 
             fn _ensure_has_role(&self, role: RoleType, account: Option<AccountId>) -> Result<(), AccessControlError> {
-                pendzl::contracts::access::access_control::implementation::AccessControlInternalImpl::_ensure_has_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlInternalDefaultImpl::_ensure_has_role_default_impl(self, role, account)
             }
 
         }
     ))
     .expect("Should parse");
 
-    let access_control_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::access::access_control::implementation::AccessControlImpl for #storage_struct_name {}
+    let access_control_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::access::access_control::implementation::AccessControlDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
@@ -363,27 +544,27 @@ pub(crate) fn impl_access_control(impl_args: &mut ImplArgs) {
         impl pendzl::contracts::access::access_control::AccessControl for #storage_struct_name {
             #[ink(message)]
             fn has_role(&self, role: RoleType, address: Option<AccountId>) -> bool {
-                pendzl::contracts::access::access_control::implementation::AccessControlImpl::has_role_impl(self, role, address)
+                pendzl::contracts::access::access_control::implementation::AccessControlDefaultImpl::has_role_default_impl(self, role, address)
             }
 
             #[ink(message)]
             fn get_role_admin(&self, role: RoleType) -> RoleType {
-                pendzl::contracts::access::access_control::implementation::AccessControlImpl::get_role_admin_impl(self, role)
+                pendzl::contracts::access::access_control::implementation::AccessControlDefaultImpl::get_role_admin_default_impl(self, role)
             }
 
             #[ink(message)]
             fn grant_role(&mut self, role: RoleType, account: Option<AccountId>) -> Result<(), AccessControlError> {
-                pendzl::contracts::access::access_control::implementation::AccessControlImpl::grant_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlDefaultImpl::grant_role_default_impl(self, role, account)
             }
 
             #[ink(message)]
             fn revoke_role(&mut self, role: RoleType, account: Option<AccountId>) -> Result<(), AccessControlError> {
-                pendzl::contracts::access::access_control::implementation::AccessControlImpl::revoke_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlDefaultImpl::revoke_role_default_impl(self, role, account)
             }
 
             #[ink(message)]
             fn renounce_role(&mut self, role: RoleType, account: Option<AccountId>) -> Result<(), AccessControlError> {
-                pendzl::contracts::access::access_control::implementation::AccessControlImpl::renounce_role_impl(self, role, account)
+                pendzl::contracts::access::access_control::implementation::AccessControlDefaultImpl::renounce_role_default_impl(self, role, account)
             }
         }
     ))
@@ -405,46 +586,46 @@ pub(crate) fn impl_access_control(impl_args: &mut ImplArgs) {
     override_functions("access_control::AccessControlInternal", &mut internal, impl_args.map);
     override_functions("AccessControl", &mut access_control, impl_args.map);
 
-    impl_args.items.push(syn::Item::Impl(internal_impl));
+    impl_args.items.push(syn::Item::Impl(internal_default_impl));
     impl_args.items.push(syn::Item::Impl(internal));
-    impl_args.items.push(syn::Item::Impl(access_control_impl));
+    impl_args.items.push(syn::Item::Impl(access_control_default_impl));
     impl_args.items.push(syn::Item::Impl(access_control));
 }
 
 pub(crate) fn impl_pausable(impl_args: &mut ImplArgs) {
     let storage_struct_name = impl_args.contract_name();
-    let internal_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::security::pausable::implementation::PausableInternalImpl for #storage_struct_name {}
+    let internal_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl pendzl::contracts::security::pausable::implementation::PausableInternalDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
     let mut internal = syn::parse2::<syn::ItemImpl>(quote!(
         impl pendzl::contracts::security::pausable::PausableInternal for #storage_struct_name {
             fn _paused(&self) -> bool {
-                pendzl::contracts::security::pausable::implementation::PausableInternalImpl::_paused_impl(self)
+                pendzl::contracts::security::pausable::implementation::PausableInternalDefaultImpl::_paused_default_impl(self)
             }
 
             fn _pause(&mut self) -> Result<(), PausableError> {
-                pendzl::contracts::security::pausable::implementation::PausableInternalImpl::_pause_impl(self)
+                pendzl::contracts::security::pausable::implementation::PausableInternalDefaultImpl::_pause_default_impl(self)
             }
 
             fn _unpause(&mut self) -> Result<(), PausableError> {
-                pendzl::contracts::security::pausable::implementation::PausableInternalImpl::_unpause_impl(self)
+                pendzl::contracts::security::pausable::implementation::PausableInternalDefaultImpl::_unpause_default_impl(self)
             }
 
             fn _ensure_paused(&self) -> Result<(), PausableError> {
-                pendzl::contracts::security::pausable::implementation::PausableInternalImpl::_ensure_paused_impl(self)
+                pendzl::contracts::security::pausable::implementation::PausableInternalDefaultImpl::_ensure_paused_default_impl(self)
             }
 
             fn _ensure_not_paused(&self) -> Result<(), PausableError> {
-                pendzl::contracts::security::pausable::implementation::PausableInternalImpl::_ensure_not_paused_impl(self)
+                pendzl::contracts::security::pausable::implementation::PausableInternalDefaultImpl::_ensure_not_paused_default_impl(self)
             }
         }
     ))
     .expect("Should parse");
 
-    let pausable_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl  pendzl::contracts::security::pausable::implementation::PausableImpl for #storage_struct_name {}
+    let pausable_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
+        impl  pendzl::contracts::security::pausable::implementation::PausableDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
@@ -452,7 +633,7 @@ pub(crate) fn impl_pausable(impl_args: &mut ImplArgs) {
         impl  pendzl::contracts::security::pausable::Pausable for #storage_struct_name {
             #[ink(message)]
             fn paused(&self) -> bool {
-                pendzl::contracts::security::pausable::implementation::PausableImpl::paused_impl(self)
+                pendzl::contracts::security::pausable::implementation::PausableDefaultImpl::paused_default_impl(self)
             }
         }
     ))
@@ -473,9 +654,9 @@ pub(crate) fn impl_pausable(impl_args: &mut ImplArgs) {
     override_functions("pausable::Internal", &mut internal, impl_args.map);
     override_functions("Pausable", &mut pausable, impl_args.map);
 
-    impl_args.items.push(syn::Item::Impl(internal_impl));
+    impl_args.items.push(syn::Item::Impl(internal_default_impl));
     impl_args.items.push(syn::Item::Impl(internal));
-    impl_args.items.push(syn::Item::Impl(pausable_impl));
+    impl_args.items.push(syn::Item::Impl(pausable_default_impl));
     impl_args.items.push(syn::Item::Impl(pausable));
 }
 
