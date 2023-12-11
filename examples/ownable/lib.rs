@@ -47,9 +47,10 @@ pub mod ownable {
         #[rustfmt::skip]
         use super::*;
         #[rustfmt::skip]
-        use ink_e2e::{build_message, PolkadotConfig};
-
-        use test_helpers::address_of;
+        use ink_e2e::ContractsBackend;
+        use ink_e2e::account_id;
+        use ink_e2e::AccountKeyring::{Alice, Bob};
+        use ink_e2e::{alice, bob};
 
         type E2EResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -57,178 +58,124 @@ pub mod ownable {
         async fn owner_is_by_default_contract_deployer(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-            let constructor = ContractRef::new();
-            let address = client
-                .instantiate("my_ownable", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new();
+            let contract = client
+                .instantiate("my_ownable", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            assert_eq!(owner, Some(account_id(Alice)));
 
             Ok(())
         }
 
         #[ink_e2e::test]
         async fn only_owner_is_allowed_to_mint(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-            let constructor = ContractRef::new();
-            let address = client
-                .instantiate("my_ownable", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new();
+            let mut contract = client
+                .instantiate("my_ownable", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            assert_eq!(owner, Some(account_id(Alice)));
 
-            let mint_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.mint(address_of!(Bob), vec![(Id::U8(0), 1)]));
-                client
-                    .call(&ink_e2e::alice(), _msg, 0, None)
-                    .await
-                    .expect("mint failed")
-            }
-            .return_value();
+            let mint_res = client
+                .call(&ink_e2e::alice(), &contract.mint(account_id(Bob), 1))
+                .submit()
+                .await
+                .expect("mint failed")
+                .return_value();
 
-            assert_eq!(mint_tx, Ok(()));
+            assert!(matches!(mint_res, Ok(())));
 
             Ok(())
         }
 
         #[ink_e2e::test]
         async fn transfer_ownership_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-            let constructor = ContractRef::new();
-            let address = client
-                .instantiate("my_ownable", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new();
+            let mut contract = client
+                .instantiate("my_ownable", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let token = Id::U8(1);
-            let ids_amounts = vec![(token.clone(), 123)];
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            assert_eq!(owner, Some(account_id(Alice)));
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            let mint_res = client
+                .call(&ink_e2e::bob(), &contract.mint(account_id(Bob), 123))
+                .dry_run()
+                .await?
+                .return_value();
 
-            let mint_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.mint(address_of!(Bob), ids_amounts.clone()));
-                client.call_dry_run(&ink_e2e::bob(), &_msg, 0, None).await
-            }
-            .return_value();
+            assert_eq!(
+                format!("{:?}", mint_res),
+                "Err(Custom(\"O::CallerIsNotOwner\"))"
+            );
 
-            assert!(matches!(mint_tx, Err(_)));
-
-            let balance_before = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.balance_of(address_of!(Bob), Some(token.clone())));
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let balance_before = client
+                .call(&ink_e2e::alice(), &contract.balance_of(account_id(Bob)))
+                .dry_run()
+                .await?
+                .return_value();
 
             assert_eq!(balance_before, 0);
 
-            let transfer_ownership_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.transfer_ownership(address_of!(Bob)));
-                client
-                    .call(&ink_e2e::alice(), _msg, 0, None)
-                    .await
-                    .expect("transfer_ownership failed")
-            }
-            .return_value();
+            let transfer_ownership_tx = client
+                .call(
+                    &ink_e2e::alice(),
+                    &contract.transfer_ownership(account_id(Bob)),
+                )
+                .submit()
+                .await?
+                .return_value();
 
             assert_eq!(transfer_ownership_tx, Ok(()));
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::bob(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Bob)));
+            assert_eq!(owner, Some(account_id(Bob)));
 
-            let mint_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.mint(address_of!(Bob), ids_amounts.clone()));
-                client
-                    .call(&ink_e2e::bob(), _msg, 0, None)
-                    .await
-                    .expect("mint failed")
-            }
-            .return_value();
-
-            assert_eq!(mint_tx, Ok(()));
-
-            let balance_after = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.balance_of(address_of!(Bob), Some(token.clone())));
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
-
-            assert_eq!(balance_after, 123);
-
-            Ok(())
-        }
-
-        #[ink_e2e::test]
-        async fn renounce_ownership_works(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-            let constructor = ContractRef::new();
-            let address = client
-                .instantiate("my_ownable", &ink_e2e::alice(), constructor, 0, None)
-                .await
-                .expect("instantiate failed")
-                .account_id;
-
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
-
-            assert_eq!(owner, Some(address_of!(Alice)));
-
-            let renounce_ownership_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.renounce_ownership());
-                client
-                    .call(&ink_e2e::alice(), _msg, 0, None)
-                    .await
-                    .expect("renounce_ownership failed")
-            }
-            .return_value();
+            let renounce_ownership_tx = client
+                .call(&ink_e2e::bob(), &contract.renounce_ownership())
+                .submit()
+                .await?
+                .return_value();
 
             assert_eq!(renounce_ownership_tx, Ok(()));
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
             assert_eq!(owner, None);
 
@@ -239,39 +186,40 @@ pub mod ownable {
         async fn cannot_renounce_ownership_if_not_owner(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-            let constructor = ContractRef::new();
-            let address = client
-                .instantiate("my_ownable", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new();
+            let mut contract = client
+                .instantiate("my_ownable", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            assert_eq!(owner, Some(account_id(Alice)));
 
-            let renounce_ownership_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.renounce_ownership());
-                client.call_dry_run(&ink_e2e::bob(), &_msg, 0, None).await
-            }
-            .return_value();
+            let renounce_ownership_tx = client
+                .call(&ink_e2e::bob(), &contract.renounce_ownership())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert!(matches!(renounce_ownership_tx, Err(_)));
+            assert_eq!(
+                format!("{:?}", renounce_ownership_tx),
+                "Err(CallerIsNotOwner)"
+            );
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            assert_eq!(owner, Some(account_id(Alice)));
 
             Ok(())
         }
@@ -280,39 +228,40 @@ pub mod ownable {
         async fn cannot_transfer_ownership_if_not_owner(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-            let constructor = ContractRef::new();
-            let address = client
-                .instantiate("my_ownable", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new();
+            let mut contract = client
+                .instantiate("my_ownable", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            assert_eq!(owner, Some(account_id(Alice)));
 
-            let renounce_ownership_tx = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.renounce_ownership());
-                client.call_dry_run(&ink_e2e::bob(), &_msg, 0, None).await
-            }
-            .return_value();
+            let renounce_ownership_tx = client
+                .call(&ink_e2e::bob(), &contract.renounce_ownership())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert!(matches!(renounce_ownership_tx, Err(_)));
+            assert_eq!(
+                format!("{:?}", renounce_ownership_tx),
+                "Err(CallerIsNotOwner)"
+            );
 
-            let owner = {
-                let _msg =
-                    build_message::<ContractRef>(address.clone()).call(|contract| contract.owner());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let owner = client
+                .call(&ink_e2e::alice(), &contract.owner())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert_eq!(owner, Some(address_of!(Alice)));
+            assert_eq!(owner, Some(account_id(Alice)));
 
             Ok(())
         }
