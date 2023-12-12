@@ -45,7 +45,7 @@ pub mod my_psp22 {
         #[rustfmt::skip]
         use super::*;
         #[rustfmt::skip]
-        use ink_e2e::build_message;
+        use ink_e2e::ContractsBackend;
 
         type E2EResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -54,37 +54,35 @@ pub mod my_psp22 {
             let _name = String::from("TOKEN");
             let _symbol = String::from("TKN");
 
-            let constructor = ContractRef::new(1000, Some(_name), Some(_symbol), 18);
-            let address = client
-                .instantiate("my_psp22_metadata", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new(1000, Some(_name), Some(_symbol), 18);
+            let contract = client
+                .instantiate("my_psp22_metadata", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let token_name = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.token_name());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let token_name = client
+                .call(&ink_e2e::alice(), &contract.token_name())
+                .dry_run()
+                .await?
+                .return_value();
 
-            let token_symbol = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.token_symbol());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let token_symbol = client
+                .call(&ink_e2e::alice(), &contract.token_symbol())
+                .dry_run()
+                .await?
+                .return_value();
 
-            let token_decimals = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.token_decimals());
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            }
-            .return_value();
+            let token_decimals = client
+                .call(&ink_e2e::alice(), &contract.token_decimals())
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert!(matches!(token_name, Some(_name)));
-            assert!(matches!(token_symbol, Some(_symbol)));
-            assert!(matches!(token_decimals, 18));
+            assert_eq!(format!("{:?}", token_name), "Some(\"TOKEN\")");
+            assert_eq!(format!("{:?}", token_symbol), "Some(\"TKN\")");
+            assert_eq!(format!("{:?}", token_decimals), "18");
 
             Ok(())
         }

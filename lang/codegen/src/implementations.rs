@@ -225,7 +225,7 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
 pub(crate) fn impl_psp22_metadata(impl_args: &mut ImplArgs) {
     let storage_struct_name = impl_args.contract_name();
     let metadata_default_impl = syn::parse2::<syn::ItemImpl>(quote!(
-        impl pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl for #storage_struct_name {}
+        impl pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataDefaultImpl for #storage_struct_name {}
     ))
     .expect("Should parse");
 
@@ -233,17 +233,17 @@ pub(crate) fn impl_psp22_metadata(impl_args: &mut ImplArgs) {
         impl pendzl::contracts::token::psp22::extensions::metadata::PSP22Metadata for #storage_struct_name {
             #[ink(message)]
             fn token_name(&self) -> Option<String> {
-                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_name_default_impl(self)
+                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataDefaultImpl::token_name_default_impl(self)
             }
 
             #[ink(message)]
             fn token_symbol(&self) -> Option<String> {
-                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_symbol_default_impl(self)
+                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataDefaultImpl::token_symbol_default_impl(self)
             }
 
             #[ink(message)]
             fn token_decimals(&self) -> u8 {
-                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataImpl::token_decimals_default_impl(self)
+                pendzl::contracts::token::psp22::extensions::metadata::implementation::PSP22MetadataDefaultImpl::token_decimals_default_impl(self)
             }
         }
     ))
