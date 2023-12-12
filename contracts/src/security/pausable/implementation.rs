@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pub use super::{Pausable, PausableError, PausableInternal, PausableStorage, Paused, Unpaused};
-use pendzl::traits::{AccountId, Storage};
+use pendzl::traits::Storage;
 
 #[derive(Default, Debug)]
 #[pendzl::storage_item]
@@ -37,7 +37,6 @@ where
     fn _pause_default_impl(&mut self) -> Result<(), PausableError> {
         self._ensure_not_paused_default_impl()?;
         self.data().set_paused(true);
-        let account = Self::env().caller();
         Self::env().emit_event(Paused {
             account: Self::env().caller(),
         });

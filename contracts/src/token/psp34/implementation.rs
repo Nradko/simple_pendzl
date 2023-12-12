@@ -140,7 +140,7 @@ pub trait PSP34DefaultImpl: PSP34Internal + DefaultEnv {
         if let Some(owner) = self._owner_of(&id) {
             let caller = Self::env().caller();
             if caller == owner || self._allowance(&owner, &caller, &Some(id.clone())) {
-                self._transfer(&caller, &to, &id, &data)
+                self._transfer(&owner, &to, &id, &data)
             } else {
                 Err(PSP34Error::NotApproved)
             }

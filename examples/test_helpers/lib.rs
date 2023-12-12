@@ -8,11 +8,13 @@ macro_rules! address_of {
 #[macro_export]
 macro_rules! balance_of {
     ($client:ident, $contract:ident, $account:ident) => {{
-        let _msg = build_message::<ContractRef>($contract.clone())
-            .call(|contract| contract.balance_of(address_of!($account)));
         $client
-            .call_dry_run(&ink_e2e::alice(), &_msg)
-            .await
+            .call(
+                &ink_e2e::alice(),
+                &$contract.balance_of(address_of!($account)),
+            )
+            .dry_run()
+            .await?
             .return_value()
     }};
 }
@@ -21,7 +23,10 @@ macro_rules! balance_of {
 macro_rules! owner_of {
     ($client:ident, $contract:ident, $id:expr) => {{
         $client
-            .call(&ink_e2e::alice(), &contract.owner_of(id))
+            .call(
+                &ink_e2e::alice(),
+                &$contract.owner_of(pendzl::contracts::token::psp34::Id::U8($id)),
+            )
             .dry_run()
             .await
             .expect("owner of dry failed")
