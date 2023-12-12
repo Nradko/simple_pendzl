@@ -82,6 +82,31 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
                 pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_update_default_impl(self, from, to, amount)
             }
 
+            fn _transfer(
+                &mut self,
+                from: &AccountId,
+                to: &AccountId,
+                amount: &Balance,
+            ) -> Result<(), PSP22Error> {
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_transfer_default_impl(self, from, to, amount)
+            }
+
+            fn _mint_to(
+                &mut self,
+                to: &AccountId,
+                amount: &Balance,
+            ) -> Result<(), PSP22Error> {
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_mint_to_default_impl(self, to, amount)
+            }
+            
+            fn _burn_from(
+                &mut self,
+                from: &AccountId,
+                amount: &Balance,
+            ) -> Result<(), PSP22Error> {
+                pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl::_burn_from_default_impl(self, from, amount)
+            }
+
             fn _approve(
                 &mut self,
                 owner: &AccountId,
@@ -184,7 +209,7 @@ pub(crate) fn impl_psp22(impl_args: &mut ImplArgs) {
     impl_args.vec_import();
 
     override_functions(
-        "PSP22InternalDefaultImpl",
+        "PSP22Internal",
         &mut internal,
         impl_args.map,
     );
@@ -485,7 +510,7 @@ pub(crate) fn impl_ownable(impl_args: &mut ImplArgs) {
     impl_args.imports.insert("Ownable", import);
     impl_args.imports.insert("OwnableData", import_data);
 
-    override_functions("ownable::Internal", &mut internal, impl_args.map);
+    override_functions("OwnableInternal", &mut internal, impl_args.map);
     override_functions("Ownable", &mut ownable, impl_args.map);
 
     impl_args.items.push(syn::Item::Impl(internal_default_impl));
@@ -583,7 +608,7 @@ pub(crate) fn impl_access_control(impl_args: &mut ImplArgs) {
     impl_args.imports.insert("AccessControl", import);
     impl_args.imports.insert("AccessControlData", import_data);
 
-    override_functions("access_control::AccessControlInternal", &mut internal, impl_args.map);
+    override_functions("AccessControlInternal", &mut internal, impl_args.map);
     override_functions("AccessControl", &mut access_control, impl_args.map);
 
     impl_args.items.push(syn::Item::Impl(internal_default_impl));
@@ -651,7 +676,7 @@ pub(crate) fn impl_pausable(impl_args: &mut ImplArgs) {
     impl_args.imports.insert("Pausable", import);
     impl_args.imports.insert("PausableData", import_data);
 
-    override_functions("pausable::Internal", &mut internal, impl_args.map);
+    override_functions("PausableInternal", &mut internal, impl_args.map);
     override_functions("Pausable", &mut pausable, impl_args.map);
 
     impl_args.items.push(syn::Item::Impl(internal_default_impl));
