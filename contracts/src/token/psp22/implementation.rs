@@ -134,7 +134,11 @@ pub trait PSP22DefaultImpl: DefaultEnv + PSP22Internal {
         Ok(())
     }
 
-    fn approve_default_impl(&mut self, spender: AccountId, value: Balance) -> Result<(), PSP22Error> {
+    fn approve_default_impl(
+        &mut self,
+        spender: AccountId,
+        value: Balance,
+    ) -> Result<(), PSP22Error> {
         let owner = Self::env().caller();
         self._approve(&owner, &spender, &value)?;
         Ok(())
@@ -200,6 +204,32 @@ where
         });
         Ok(())
     }
+
+    fn _transfer_default_impl(
+        &mut self,
+        from: &AccountId,
+        to: &AccountId,
+        amount: &Balance,
+    ) -> Result<(), PSP22Error> {
+        self._update_default_impl(Some(from), Some(to), amount)
+    }
+
+    fn _mint_to_default_impl(
+        &mut self,
+        to: &AccountId,
+        amount: &Balance,
+    ) -> Result<(), PSP22Error> {
+        self._update_default_impl(None, Some(to), amount)
+    }
+
+    fn _burn_from_default_impl(
+        &mut self,
+        from: &AccountId,
+        amount: &Balance,
+    ) -> Result<(), PSP22Error> {
+        self._update_default_impl(Some(from), None, amount)
+    }
+
     fn _approve_default_impl(
         &mut self,
         owner: &AccountId,

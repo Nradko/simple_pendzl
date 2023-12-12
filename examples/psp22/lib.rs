@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
-use ink::primitives::AccountId;
+use ink::{prelude::string::String, primitives::AccountId};
 // we need to expand this struct before the contract macro is expanded
 // that is why we declare it here for this example
 #[ink::storage_item]
@@ -23,7 +23,7 @@ pub mod my_psp22 {
         hated_storage: HatedStorage,
     }
 
-    #[overrider(psp22::Internal)]
+    #[overrider(PSP22Internal)]
     fn _update(
         &mut self,
         from: Option<AccountId>,
@@ -33,6 +33,7 @@ pub mod my_psp22 {
         if to == Some(&self.hated_storage.hated_account) {
             return Err(PSP22Error::Custom(String::from("I hate this account!")));
         }
+        use pendzl::contracts::token::psp22::implementation::PSP22InternalDefaultImpl;
         self._update_default_impl(from, to, amount)
     }
 
@@ -47,7 +48,7 @@ pub mod my_psp22 {
             };
 
             instance
-                ._update(None, Some(&Self::env().caller()), &total_supply)
+                ._mint_to(&Self::env().caller(), &total_supply)
                 .expect("Should mint");
 
             instance
@@ -62,27 +63,28 @@ pub mod my_psp22 {
     #[cfg(all(test, feature = "e2e-tests"))]
     pub mod tests {
         use super::*;
-        use ink_e2e::{build_message, PolkadotConfig};
+        use ink_e2e::ContractsBackend;
         use test_helpers::{address_of, balance_of};
 
         type E2EResult<T> = Result<T, Box<dyn std::error::Error>>;
 
         #[ink_e2e::test]
         async fn assigns_initial_balance(mut client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-            let constructor = ContractRef::new(100);
-            let address = client
-                .instantiate("my_psp22", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new(100);
+            let contract = client
+                .instantiate("my_psp22", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let result = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.balance_of(address_of!(Alice)));
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            };
+            let balance_of_deployer = client
+                .call(&ink_e2e::alice(), &contract.balance_of(address_of!(Alice)))
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert!(matches!(result.return_value(), 100));
+            assert_eq!(balance_of_deployer, 100);
 
             Ok(())
         }
@@ -91,27 +93,31 @@ pub mod my_psp22 {
         async fn transfer_adds_amount_to_destination_account(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-            let constructor = ContractRef::new(100);
-            let address = client
-                .instantiate("my_psp22", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new(100);
+            let mut contract = client
+                .instantiate("my_psp22", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
             let result = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.transfer(address_of!(Bob), 50, vec![]));
                 client
-                    .call(&ink_e2e::alice(), _msg, 0, None)
+                    .call(
+                        &ink_e2e::alice(),
+                        &contract.transfer(address_of!(Bob), 50, vec![]),
+                    )
+                    .submit()
                     .await
                     .expect("transfer failed")
+                    .return_value()
             };
 
-            assert!(matches!(result.return_value(), Ok(())));
+            assert!(matches!(result, Ok(())));
 
-            let balance_of_alice = balance_of!(client, address, Alice);
+            let balance_of_alice = balance_of!(client, contract, Alice);
 
-            let balance_of_bob = balance_of!(client, address, Bob);
+            let balance_of_bob = balance_of!(client, contract, Bob);
 
             assert_eq!(balance_of_bob, 50, "Bob should have 50 tokens");
             assert_eq!(balance_of_alice, 50, "Alice should have 50 tokens");
@@ -123,23 +129,24 @@ pub mod my_psp22 {
         async fn cannot_transfer_above_the_amount(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-            let constructor = ContractRef::new(100);
-            let address = client
-                .instantiate("my_psp22", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new(100);
+            let mut contract = client
+                .instantiate("my_psp22", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let result = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.transfer(address_of!(Bob), 101, vec![]));
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            };
+            let result = client
+                .call(
+                    &ink_e2e::alice(),
+                    &contract.transfer(address_of!(Bob), 101, vec![]),
+                )
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert!(matches!(
-                result.return_value(),
-                Err(PSP22Error::InsufficientBalance)
-            ));
+            assert_eq!(format!("{:?}", result), "Err(InsufficientBalance)");
 
             Ok(())
         }
@@ -148,48 +155,57 @@ pub mod my_psp22 {
         async fn cannot_transfer_to_hated_account(
             mut client: ink_e2e::Client<C, E>,
         ) -> E2EResult<()> {
-            let constructor = ContractRef::new(100);
-            let address = client
-                .instantiate("my_psp22", &ink_e2e::alice(), constructor, 0, None)
+            let mut constructor = ContractRef::new(100);
+            let mut contract = client
+                .instantiate("my_psp22", &ink_e2e::alice(), &mut constructor)
+                .submit()
                 .await
                 .expect("instantiate failed")
-                .account_id;
+                .call::<Contract>();
 
-            let result = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.transfer(address_of!(Bob), 10, vec![]));
-                client
-                    .call(&ink_e2e::alice(), _msg, 0, None)
-                    .await
-                    .expect("transfer failed")
-            };
+            let result = client
+                .call(
+                    &ink_e2e::alice(),
+                    &contract.transfer(address_of!(Bob), 10, vec![]),
+                )
+                .submit()
+                .await
+                .expect("transfer failed")
+                .return_value();
 
-            assert!(matches!(result.return_value(), Ok(())));
+            assert!(matches!(result, Ok(())));
 
-            let balance_of_bob = balance_of!(client, address, Bob);
+            let balance_of_bob = balance_of!(client, contract, Bob);
 
-            assert!(matches!(balance_of_bob, 10));
+            assert_eq!(balance_of_bob, 10);
 
-            let result = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.set_hated_account(address_of!(Bob)));
-                client
-                    .call(&ink_e2e::alice(), _msg, 0, None)
-                    .await
-                    .expect("set_hated_account failed")
-            };
+            let result = client
+                .call(
+                    &ink_e2e::alice(),
+                    &contract.set_hated_account(address_of!(Bob)),
+                )
+                .submit()
+                .await
+                .expect("set_hated_account failed")
+                .return_value();
 
-            assert!(matches!(result.return_value(), ()));
+            assert!(matches!(result, ()));
 
-            let result = {
-                let _msg = build_message::<ContractRef>(address.clone())
-                    .call(|contract| contract.transfer(address_of!(Bob), 10, vec![]));
-                client.call_dry_run(&ink_e2e::alice(), &_msg, 0, None).await
-            };
+            let result = client
+                .call(
+                    &ink_e2e::alice(),
+                    &contract.transfer(address_of!(Bob), 10, vec![]),
+                )
+                .dry_run()
+                .await?
+                .return_value();
 
-            assert!(matches!(result.return_value(), Err(PSP22Error::Custom(_))));
+            assert_eq!(
+                format!("{:?}", result),
+                "Err(Custom(\"I hate this account!\"))"
+            );
 
-            let balance_of_bob = balance_of!(client, address, Bob);
+            let balance_of_bob = balance_of!(client, contract, Bob);
 
             assert!(matches!(balance_of_bob, 10));
 

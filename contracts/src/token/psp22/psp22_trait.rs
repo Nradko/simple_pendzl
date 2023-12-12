@@ -166,6 +166,17 @@ pub trait PSP22Internal {
         amount: &Balance,
     ) -> Result<(), PSP22Error>;
 
+    fn _transfer(
+        &mut self,
+        from: &AccountId,
+        to: &AccountId,
+        amount: &Balance,
+    ) -> Result<(), PSP22Error>;
+
+    fn _mint_to(&mut self, to: &AccountId, amount: &Balance) -> Result<(), PSP22Error>;
+
+    fn _burn_from(&mut self, from: &AccountId, amount: &Balance) -> Result<(), PSP22Error>;
+
     fn _approve(
         &mut self,
         owner: &AccountId,
