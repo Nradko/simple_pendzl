@@ -50,6 +50,7 @@ std = [
     "pendzl_lang/std",
 ]
 psp22 = ["pendzl_contracts/psp22"]
+vault = ["pendzl_contracts/vault"]
 psp34 = ["pendzl_contracts/psp34"]
 # # psp37 = ["pendzl_contracts/psp37"]
 access_control = ["pendzl_contracts/access_control"]
@@ -83,4 +84,3 @@ lto = false
 [profile.dev]
 panic = "abort"
 lto = false
-overflow-checks = false
