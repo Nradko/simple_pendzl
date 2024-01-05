@@ -26,6 +26,8 @@ pendzl = { path = "../../..", default-features = false, features = [
 [dev-dependencies]
 ink_e2e = "5.0.0-rc"
 test_helpers = { path = "../../test_helpers", default-features = false }
+my_psp22_metadata = { path = "../metadata", default-features = false }
+my_psp22_mintable = { path = "../mintable", default-features = false }
 
 [lib]
 name = "my_psp22_vault"

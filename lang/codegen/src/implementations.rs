@@ -344,8 +344,8 @@ pub(crate) fn impl_psp22_vault(impl_args: &mut ImplArgs) {
                 pendzl::contracts::token::psp22::extensions::vault::implementation::PSP22VaultInternalDefaultImpl::_decimals_offset_default_impl(self)
             }
         
-            fn _try_get_asset_decimals(&self, asset: &AccountId) -> (bool, u8) {
-                pendzl::contracts::token::psp22::extensions::vault::implementation::PSP22VaultInternalDefaultImpl::_try_get_asset_decimals_default_impl(self, asset)
+            fn _try_get_asset_decimals(&self) -> (bool, u8) {
+                pendzl::contracts::token::psp22::extensions::vault::implementation::PSP22VaultInternalDefaultImpl::_try_get_asset_decimals_default_impl(self)
             }
         
             fn _asset(&self) -> PSP22Ref {

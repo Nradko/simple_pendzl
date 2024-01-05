@@ -62,9 +62,9 @@ where
         0
     }
 
-    fn _try_get_asset_decimals_default_impl(&self, asset: &AccountId) -> (bool, u8) {
+    fn _try_get_asset_decimals_default_impl(&self) -> (bool, u8) {
         let call = build_call::<DefaultEnvironment>()
-            .call(*asset)
+            .call(self.data::<Data>().asset().to_account_id())
             .exec_input(ExecutionInput::new(ink::env::call::Selector::new(
                 ink::selector_bytes!("PSP22Metadata::token_decimals"),
             )))
@@ -117,11 +117,11 @@ where
         )
     }
 
-    fn _max_deposit_default_impl(&self, _receiver: &AccountId) -> Balance {
+    fn _max_deposit_default_impl(&self, _to: &AccountId) -> Balance {
         u128::MAX
     }
 
-    fn _max_mint_default_impl(&self, _receiver: &AccountId) -> Balance {
+    fn _max_mint_default_impl(&self, _to: &AccountId) -> Balance {
         u128::MAX
     }
 
@@ -137,7 +137,9 @@ where
     }
 
     fn _preview_mint_default_impl(&self, shares: &Balance) -> Result<Balance, MathError> {
-        self._convert_to_assets(&shares)
+        self._convert_to_assets(&shares)?
+            .checked_add(1)
+            .ok_or(MathError::Overflow)
     }
 
     fn _preview_withdraw_default_impl(&self, assets: &Balance) -> Result<Balance, MathError> {
@@ -145,7 +147,9 @@ where
     }
 
     fn _preview_redeem_default_impl(&self, shares: &Balance) -> Result<Balance, MathError> {
-        self._convert_to_assets(&shares)
+        self._convert_to_assets(&shares)?
+            .checked_add(1)
+            .ok_or(MathError::Overflow)
     }
 
     fn _deposit_default_impl(
@@ -250,6 +254,7 @@ pub trait PSP22VaultDefaultImpl: PSP22VaultInternal + PSP22Internal + DefaultEnv
             return Err(PSP22Error::Custom("Vault: Max".to_string()));
         }
         let shares = self._preview_deposit(&assets)?;
+        self._deposit(&Self::env().caller(), &receiver, &assets, &shares)?;
         Ok(shares)
     }
 

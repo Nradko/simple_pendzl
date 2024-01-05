@@ -213,7 +213,7 @@ pub trait PSP22VaultInternal {
     ///
     /// - Returns a tuple of a boolean and a uint8. The boolean indicates success, and the uint8 represents the decimals.
     /// - A return value of false indicates that the attempt failed in some way.
-    fn _try_get_asset_decimals(&self, asset: &AccountId) -> (bool, u8);
+    fn _try_get_asset_decimals(&self) -> (bool, u8);
 
     /// returns reference to asset that can be deposited and withdrawn
     fn _asset(&self) -> PSP22Ref;
