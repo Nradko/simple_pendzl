@@ -17,6 +17,17 @@ macro_rules! balance_of {
 }
 
 #[macro_export]
+macro_rules! balance_of2 {
+    ($client:ident, $contract:ident, $account:ident) => {{
+        $client
+            .call(&ink_e2e::alice(), &$contract.balance_of($account))
+            .dry_run()
+            .await?
+            .return_value()
+    }};
+}
+
+#[macro_export]
 macro_rules! owner_of {
     ($client:ident, $contract:ident, $id:expr) => {{
         $client
@@ -109,11 +120,56 @@ macro_rules! mint {
         $client
             .call(
                 &ink_e2e::$signer(),
-                contract.mint(ink_e2e::account_id($account), $amount),
+                &$contract.mint(ink_e2e::account_id($account), $amount),
             )
             .submit()
             .await
             .expect("mint failed")
+            .return_value()
+    }};
+
+    ($client:ident, $contract:ident, $account:ident, $amount:ident) => {{
+        $client
+            .call(
+                &ink_e2e::alice(),
+                &$contract.mint(ink_e2e::account_id($account), $amount),
+            )
+            .submit()
+            .await
+            .expect("mint failed")
+            .return_value()
+    }};
+}
+
+#[macro_export]
+macro_rules! mint2 {
+    ($client:ident, $contract:ident, $signer:ident, $account:ident, $amount:ident) => {{
+        $client
+            .call(&ink_e2e::$signer(), &$contract.mint($account, $amount))
+            .submit()
+            .await
+            .expect("mint failed")
+            .return_value()
+    }};
+
+    ($client:ident, $contract:ident, $account:ident, $amount:ident) => {{
+        $client
+            .call(&ink_e2e::alice(), &$contract.mint($account, $amount))
+            .submit()
+            .await
+            .expect("mint failed")
+            .return_value()
+    }};
+}
+
+#[macro_export]
+macro_rules! approve {
+    ($client:ident, $contract:ident, $signer:ident, $account:ident, $amount:ident) => {{
+        $client
+            .call(&ink_e2e::$signer(), &$contract.approve($account, $amount))
+            .submit()
+            .await
+            .expect("approve failed")
             .return_value()
     }};
 }

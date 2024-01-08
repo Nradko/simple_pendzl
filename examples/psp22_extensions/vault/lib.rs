@@ -75,10 +75,9 @@ pub mod tests {
         scale::Decode as _,
         ToAccountId,
     };
-    use ink_e2e::account_id;
     use ink_e2e::events::ContractEmitted;
-    use ink_e2e::AccountKeyring::{Alice, Bob};
-    use ink_e2e::ContractsBackend;
+    use ink_e2e::AccountKeyring::{Alice, Bob, Charlie, Dave};
+    use ink_e2e::{account_id, ContractsBackend};
     use my_psp22_metadata::my_psp22_metadata::{
         Contract as PSP22MetadataContract, ContractRef as PSP22MetadataRef, *,
     };
@@ -89,8 +88,10 @@ pub mod tests {
     use pendzl::contracts::token::psp22::Transfer;
     use pendzl::traits::AccountId;
     use pendzl::traits::Balance;
+    use test_helpers::approve;
+    use test_helpers::balance_of2;
     use test_helpers::{assert_eq_msg, balance_of};
-    use test_helpers::{keypair_to_account, mint};
+    use test_helpers::{keypair_to_account, mint, mint2};
 
     use my_psp22_metadata::my_psp22_metadata::PSP22Metadata;
     use pendzl::contracts::token::psp22::PSP22;
@@ -305,7 +306,7 @@ pub mod tests {
         let _ = client
             .call(
                 &ink_e2e::alice(),
-                &psp22_mintable.mint(ink_e2e::account_id(Alice), deposit_amount),
+                &psp22_mintable.mint(account_id(Alice), deposit_amount),
             )
             .submit()
             .await
@@ -361,7 +362,7 @@ pub mod tests {
         let _ = client
             .call(
                 &ink_e2e::alice(),
-                &psp22_mintable.mint(ink_e2e::account_id(Alice), mint_amount),
+                &psp22_mintable.mint(account_id(Alice), mint_amount),
             )
             .submit()
             .await
@@ -388,7 +389,7 @@ pub mod tests {
 
         assert_eq!(
             mint,
-            Err(PSP22Error::Custom("Vault: Maxx".to_string())),
+            Err(PSP22Error::Custom("Vault: Max".to_string())),
             "should return Vault: Max err"
         );
         Ok(())
@@ -418,7 +419,7 @@ pub mod tests {
         let _ = client
             .call(
                 &ink_e2e::alice(),
-                &psp22_mintable.mint(ink_e2e::account_id(Alice), balance),
+                &psp22_mintable.mint(account_id(Alice), balance),
             )
             .submit()
             .await
@@ -459,7 +460,7 @@ pub mod tests {
 
         assert_eq!(
             redeem,
-            Err(PSP22Error::Custom("Vault: Maxx".to_string())),
+            Err(PSP22Error::Custom("Vault: Max".to_string())),
             "should return Vault: Max err"
         );
         Ok(())
@@ -489,7 +490,7 @@ pub mod tests {
         let _ = client
             .call(
                 &ink_e2e::alice(),
-                &psp22_mintable.mint(ink_e2e::account_id(Alice), max_withdraw),
+                &psp22_mintable.mint(account_id(Alice), max_withdraw),
             )
             .submit()
             .await
@@ -542,16 +543,15 @@ pub mod tests {
 
     #[ink_e2e::test]
     async fn deposit_1_token_in_empty_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
-        let holder = ink_e2e::alice();
-        let spender = ink_e2e::bob();
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
         for offset in vec![0_u8, 4, 8, 12].iter() {
             // print whole line separator
             println!("deposit_1_token_in_empty_vault");
             println!("====================");
             println!("testing with offset: {}", offset);
             println!("====================");
-            let virtual_assets = 1_u128;
-            let virtual_shares = 10_u128.pow(*offset as u32);
 
             //before each
             let mut constructor = PSP22MintableRef::new(0);
@@ -569,40 +569,23 @@ pub mod tests {
                 .await
                 .expect("instantiate failed")
                 .call::<VaultContract>();
-
-            let _ = client
-                .call(
-                    &holder,
-                    &psp22_mintable.mint(ink_e2e::account_id(Alice), parse_token(1)),
-                )
-                .submit()
-                .await
-                .expect("mint failed")
-                .return_value();
-            let _ = client
-                .call(
-                    &holder,
-                    &psp22_mintable.increase_allowance(vault.to_account_id(), parse_token(1)),
-                )
-                .submit()
-                .await
-                .expect("increase allowance failed")
-                .return_value();
-            let _ = client
-                .call(
-                    &holder,
-                    &vault.increase_allowance(keypair_to_account(&spender), parse_token(1)),
-                )
-                .submit()
-                .await
-                .expect("increase allowance failed")
-                .return_value();
+            let vault_id = vault.to_account_id();
+            let expected_token_amount = parse_token(1);
+            let expected_shares_amount = parse_share(1, offset);
+            let _ = mint!(client, psp22_mintable, Alice, expected_token_amount);
+            let _ = approve!(
+                client,
+                psp22_mintable,
+                alice,
+                vault_id,
+                expected_token_amount
+            );
             //end of before each
 
             let deposit_res = client
                 .call(
                     &ink_e2e::alice(),
-                    &vault.deposit(parse_token(1), account_id(Bob)),
+                    &vault.deposit(expected_token_amount, account_id(Bob)),
                 )
                 .submit()
                 .await?;
@@ -622,13 +605,13 @@ pub mod tests {
                     event_with_topics.event.contract == psp22_mintable.to_account_id()
                 })
                 .collect();
-            assert_eq!(deposit_res.return_value(), Ok(parse_share(1, offset)));
+            assert_eq!(deposit_res.return_value(), Ok(expected_shares_amount));
 
             assert_psp22_transfer_event(
                 &psp22_events[1].event,
-                Some(ink_e2e::account_id(Alice)),
+                Some(account_id(Alice)),
                 Some(vault.to_account_id()),
-                parse_token(1),
+                expected_token_amount,
                 psp22_mintable.to_account_id(),
             );
 
@@ -636,38 +619,1059 @@ pub mod tests {
             assert_psp22_transfer_event(
                 &vault_events[0].event,
                 None,
-                Some(ink_e2e::account_id(Bob)),
-                parse_share(1, offset),
+                Some(account_id(Bob)),
+                expected_shares_amount,
                 vault.to_account_id(),
             );
 
             assert_deposit_event(
                 &vault_events[1].event,
-                ink_e2e::account_id(Alice),
-                ink_e2e::account_id(Bob),
-                parse_token(1),
-                parse_share(1, offset),
+                account_id(Alice),
+                account_id(Bob),
+                expected_token_amount,
+                expected_shares_amount,
             );
 
-            let balance_of_vault = client
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                expected_token_amount
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, bob_id), expected_shares_amount);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn mint_1_token_in_empty_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            // print whole line separator
+            println!("mint_1_token_in_empty_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+
+            let expected_token_amount = parse_token(1) + 1;
+            let expected_shares_amount = parse_share(1, offset);
+
+            let _ = mint!(client, psp22_mintable, Alice, expected_token_amount);
+            let _ = approve!(
+                client,
+                psp22_mintable,
+                alice,
+                vault_id,
+                expected_token_amount
+            );
+            //end of before each
+
+            let mint_res = client
                 .call(
                     &ink_e2e::alice(),
-                    &psp22_mintable.balance_of(vault.to_account_id()),
+                    &vault.mint(expected_shares_amount, account_id(Bob)),
                 )
-                .dry_run()
-                .await?
-                .return_value();
-            let balance_of_alice = client
-                .call(
-                    &ink_e2e::alice(),
-                    &psp22_mintable.balance_of(ink_e2e::account_id(Alice)),
-                )
+                .submit()
+                .await
+                .expect("mint failed");
+
+            //verify
+
+            let contract_emitted_events = mint_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(mint_res.return_value(), Ok(expected_token_amount));
+
+            assert_psp22_transfer_event(
+                &psp22_events[1].event,
+                Some(account_id(Alice)),
+                Some(vault.to_account_id()),
+                expected_token_amount,
+                psp22_mintable.to_account_id(),
+            );
+
+            //mint shares
+            assert_psp22_transfer_event(
+                &vault_events[0].event,
+                None,
+                Some(account_id(Bob)),
+                expected_shares_amount,
+                vault.to_account_id(),
+            );
+
+            assert_deposit_event(
+                &vault_events[1].event,
+                account_id(Alice),
+                account_id(Bob),
+                expected_token_amount,
+                expected_shares_amount,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                expected_token_amount
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, bob_id), expected_shares_amount);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn withdraw_token_in_empty_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            // print whole line separator
+            println!("withdraw_token_in_empty_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+            //end of before each
+
+            let max_withdraw = client
+                .call(&ink_e2e::alice(), &vault.max_withdraw(account_id(Alice)))
                 .dry_run()
                 .await?
                 .return_value();
 
-            assert_eq!(balance_of_vault, parse_token(1));
-            assert_eq!(balance_of_alice, 0);
+            let preview_withdraw = client
+                .call(&ink_e2e::alice(), &vault.preview_withdraw(0))
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            let withdraw_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.withdraw(max_withdraw, account_id(Charlie), account_id(Bob)),
+                )
+                .submit()
+                .await?;
+
+            //verify
+            assert_eq!(max_withdraw, 0);
+            assert_eq!(preview_withdraw, 0);
+
+            let contract_emitted_events = withdraw_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(withdraw_res.return_value(), Ok(0));
+
+            assert_psp22_transfer_event(
+                &psp22_events[0].event,
+                Some(vault.to_account_id()),
+                Some(account_id(Charlie)),
+                0,
+                psp22_mintable.to_account_id(),
+            );
+
+            //burn shares
+            assert_psp22_transfer_event(
+                &vault_events[1].event,
+                Some(account_id(Bob)),
+                None,
+                0,
+                vault.to_account_id(),
+            );
+
+            assert_withdraw_event(
+                &vault_events[2].event,
+                account_id(Alice),
+                account_id(Charlie),
+                account_id(Bob),
+                0,
+                0,
+            );
+
+            assert_eq!(balance_of2!(client, psp22_mintable, vault_id), 0);
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, alice_id), 0);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn redeem_token_in_empty_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            // print whole line separator
+            println!("redeem_token_in_empty_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+            //end of before each
+
+            let max_redeem = client
+                .call(&ink_e2e::alice(), &vault.max_redeem(account_id(Alice)))
+                .dry_run()
+                .await?
+                .return_value();
+
+            let preview_redeem = client
+                .call(&ink_e2e::alice(), &vault.preview_redeem(0))
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            assert_eq!(max_redeem, 0);
+            assert_eq!(preview_redeem, 0);
+            let redeem_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.redeem(max_redeem, account_id(Charlie), account_id(Bob)),
+                )
+                .submit()
+                .await
+                .expect("redeem failed");
+
+            //verify
+            let contract_emitted_events = redeem_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(redeem_res.return_value(), Ok(0));
+
+            assert_psp22_transfer_event(
+                &psp22_events[0].event,
+                Some(vault.to_account_id()),
+                Some(account_id(Charlie)),
+                0,
+                psp22_mintable.to_account_id(),
+            );
+
+            //burn shares
+            assert_psp22_transfer_event(
+                &vault_events[1].event,
+                Some(account_id(Bob)),
+                None,
+                0,
+                vault.to_account_id(),
+            );
+
+            assert_withdraw_event(
+                &vault_events[2].event,
+                account_id(Alice),
+                account_id(Charlie),
+                account_id(Bob),
+                0,
+                0,
+            );
+
+            assert_eq!(balance_of2!(client, psp22_mintable, vault_id), 0);
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, alice_id), 0);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn inflation_attack_deposit(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            let virtual_assets = 1_u128;
+            let virtua_shares = 10_u128.pow(*offset as u32);
+            // print whole line separator
+            println!("inflation_attack_deposit");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+            let donated_balance = parse_token(1);
+            let _ = mint2!(client, psp22_mintable, vault_id, donated_balance);
+
+            let effective_assets = donated_balance + virtual_assets;
+            let effective_shares = 0 + virtua_shares;
+
+            let expected_token_amount = parse_token(1);
+            let expected_shares_amount =
+                expected_token_amount * effective_shares / effective_assets;
+
+            let _ = mint!(client, psp22_mintable, Alice, expected_token_amount);
+            let _ = approve!(
+                client,
+                psp22_mintable,
+                alice,
+                vault_id,
+                expected_token_amount
+            );
+            //end of before each
+
+            let preview_deposit = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.preview_deposit(expected_token_amount),
+                )
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            assert_eq!(preview_deposit, expected_shares_amount);
+
+            let deposit_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.deposit(expected_token_amount, account_id(Bob)),
+                )
+                .submit()
+                .await?;
+
+            //verify
+
+            let contract_emitted_events = deposit_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(deposit_res.return_value(), Ok(expected_shares_amount));
+
+            assert_psp22_transfer_event(
+                &psp22_events[1].event,
+                Some(account_id(Alice)),
+                Some(vault.to_account_id()),
+                expected_token_amount,
+                psp22_mintable.to_account_id(),
+            );
+
+            // mint shares
+            assert_psp22_transfer_event(
+                &vault_events[0].event,
+                None,
+                Some(account_id(Bob)),
+                expected_shares_amount,
+                vault.to_account_id(),
+            );
+
+            assert_deposit_event(
+                &vault_events[1].event,
+                account_id(Alice),
+                account_id(Bob),
+                expected_token_amount,
+                expected_shares_amount,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                expected_token_amount + donated_balance
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, bob_id), expected_shares_amount);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn inflation_attack_mint(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            let virtual_assets = 1_u128;
+            let virtua_shares = 10_u128.pow(*offset as u32);
+            // print whole line separator
+            println!("inflation_attack_mint");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+            let donated_balance = parse_token(1);
+            let _ = mint2!(client, psp22_mintable, vault_id, donated_balance);
+
+            let effective_assets = donated_balance + virtual_assets;
+            let effective_shares = 0 + virtua_shares;
+
+            let expected_shares_amount = parse_share(1, offset);
+            let expected_token_amount =
+                expected_shares_amount * effective_assets / effective_shares + 1;
+
+            let _ = mint!(client, psp22_mintable, Alice, expected_token_amount);
+            let _ = approve!(
+                client,
+                psp22_mintable,
+                alice,
+                vault_id,
+                expected_token_amount
+            );
+            //end of before each
+
+            let preview_mint = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.preview_mint(expected_shares_amount),
+                )
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            assert_eq!(preview_mint, expected_token_amount);
+
+            let mint_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.mint(expected_shares_amount, account_id(Bob)),
+                )
+                .submit()
+                .await?;
+
+            //verify
+
+            let contract_emitted_events = mint_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(mint_res.return_value(), Ok(expected_token_amount));
+
+            assert_psp22_transfer_event(
+                &psp22_events[1].event,
+                Some(account_id(Alice)),
+                Some(vault.to_account_id()),
+                expected_token_amount,
+                psp22_mintable.to_account_id(),
+            );
+
+            // mint shares
+            assert_psp22_transfer_event(
+                &vault_events[0].event,
+                None,
+                Some(account_id(Bob)),
+                expected_shares_amount,
+                vault.to_account_id(),
+            );
+
+            assert_deposit_event(
+                &vault_events[1].event,
+                account_id(Alice),
+                account_id(Bob),
+                expected_token_amount,
+                expected_shares_amount,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                expected_token_amount + donated_balance
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, bob_id), expected_shares_amount);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn withdraw_token_in_donated_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            // print whole line separator
+            println!("withdraw_token_in_donated_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+
+            let donated_balance = parse_token(1);
+            let _ = mint2!(client, psp22_mintable, vault_id, donated_balance);
+            //end of before each
+
+            let max_withdraw = client
+                .call(&ink_e2e::alice(), &vault.max_withdraw(account_id(Alice)))
+                .dry_run()
+                .await?
+                .return_value();
+
+            let preview_withdraw = client
+                .call(&ink_e2e::alice(), &vault.preview_withdraw(0))
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            let withdraw_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.withdraw(max_withdraw, account_id(Charlie), account_id(Bob)),
+                )
+                .submit()
+                .await?;
+
+            //verify
+            assert_eq!(max_withdraw, 0);
+            assert_eq!(preview_withdraw, 0);
+
+            let contract_emitted_events = withdraw_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(withdraw_res.return_value(), Ok(0));
+
+            assert_psp22_transfer_event(
+                &psp22_events[0].event,
+                Some(vault.to_account_id()),
+                Some(account_id(Charlie)),
+                0,
+                psp22_mintable.to_account_id(),
+            );
+
+            //burn shares
+            assert_psp22_transfer_event(
+                &vault_events[1].event,
+                Some(account_id(Bob)),
+                None,
+                0,
+                vault.to_account_id(),
+            );
+
+            assert_withdraw_event(
+                &vault_events[2].event,
+                account_id(Alice),
+                account_id(Charlie),
+                account_id(Bob),
+                0,
+                0,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                donated_balance
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, alice_id), 0);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn redeem_token_in_donated_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            // print whole line separator
+            println!("redeem_token_in_donated_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+
+            let donated_balance = parse_token(1);
+            let _ = mint2!(client, psp22_mintable, vault_id, donated_balance);
+            //end of before each
+
+            let max_redeem = client
+                .call(&ink_e2e::alice(), &vault.max_redeem(account_id(Alice)))
+                .dry_run()
+                .await?
+                .return_value();
+
+            let preview_redeem = client
+                .call(&ink_e2e::alice(), &vault.preview_redeem(0))
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            assert_eq!(max_redeem, 0);
+            assert_eq!(preview_redeem, 0);
+            let redeem_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.redeem(max_redeem, account_id(Charlie), account_id(Bob)),
+                )
+                .submit()
+                .await
+                .expect("redeem failed");
+
+            //verify
+            let contract_emitted_events = redeem_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(redeem_res.return_value(), Ok(0));
+
+            assert_psp22_transfer_event(
+                &psp22_events[0].event,
+                Some(vault.to_account_id()),
+                Some(account_id(Charlie)),
+                0,
+                psp22_mintable.to_account_id(),
+            );
+
+            //burn shares
+            assert_psp22_transfer_event(
+                &vault_events[1].event,
+                Some(account_id(Bob)),
+                None,
+                0,
+                vault.to_account_id(),
+            );
+
+            assert_withdraw_event(
+                &vault_events[2].event,
+                account_id(Alice),
+                account_id(Charlie),
+                account_id(Bob),
+                0,
+                0,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                donated_balance
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, alice_id), 0);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn deposit_token_in_full_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            let virtual_assets = 1_u128;
+            let virtua_shares = 10_u128.pow(*offset as u32);
+            // print whole line separator
+            println!("deposit_1_token_in_empty_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+
+            let init_deposit = parse_token(10);
+            let _ = mint!(client, psp22_mintable, Dave, init_deposit);
+            let _ = approve!(client, psp22_mintable, dave, vault_id, init_deposit);
+            let _ = client
+                .call(
+                    &ink_e2e::dave(),
+                    &vault.deposit(init_deposit, account_id(Dave)),
+                )
+                .submit()
+                .await
+                .expect("deposit failed");
+            let init_shares = balance_of!(client, vault, Dave);
+
+            let effective_assets = init_deposit + virtual_assets;
+            let effective_shares = init_shares + virtua_shares;
+
+            let expected_token_amount = parse_token(1);
+            let expected_shares_amount =
+                expected_token_amount * effective_shares / effective_assets;
+
+            let _ = mint!(client, psp22_mintable, Alice, expected_token_amount);
+            let _ = approve!(
+                client,
+                psp22_mintable,
+                alice,
+                vault_id,
+                expected_token_amount
+            );
+            //end of before each
+
+            let deposit_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.deposit(expected_token_amount, account_id(Bob)),
+                )
+                .submit()
+                .await?;
+
+            //verify
+
+            let contract_emitted_events = deposit_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(deposit_res.return_value(), Ok(expected_shares_amount));
+
+            assert_psp22_transfer_event(
+                &psp22_events[1].event,
+                Some(account_id(Alice)),
+                Some(vault.to_account_id()),
+                expected_token_amount,
+                psp22_mintable.to_account_id(),
+            );
+
+            //mint shares
+            assert_psp22_transfer_event(
+                &vault_events[0].event,
+                None,
+                Some(account_id(Bob)),
+                expected_shares_amount,
+                vault.to_account_id(),
+            );
+
+            assert_deposit_event(
+                &vault_events[1].event,
+                account_id(Alice),
+                account_id(Bob),
+                expected_token_amount,
+                expected_shares_amount,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                expected_token_amount + init_deposit
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, bob_id), expected_shares_amount);
+        }
+        Ok(())
+    }
+
+    #[ink_e2e::test]
+    async fn mint_token_in_full_vault(client: ink_e2e::Client<C, E>) -> E2EResult<()> {
+        let alice_id: AccountId = account_id(Alice);
+        let bob_id: AccountId = account_id(Bob);
+
+        for offset in vec![0_u8, 4, 8, 12].iter() {
+            let virtual_assets = 1_u128;
+            let virtua_shares = 10_u128.pow(*offset as u32);
+            // print whole line separator
+            println!("deposit_1_token_in_empty_vault");
+            println!("====================");
+            println!("testing with offset: {}", offset);
+            println!("====================");
+
+            //before each
+            let mut constructor = PSP22MintableRef::new(0);
+            let mut psp22_mintable = client
+                .instantiate("my_psp22_mintable", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<PSP22MintableContract>();
+
+            let mut constructor = VaultRef::new(psp22_mintable.to_account_id(), *offset, None);
+            let mut vault = client
+                .instantiate("my_psp22_vault", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("instantiate failed")
+                .call::<VaultContract>();
+            let vault_id = vault.to_account_id();
+
+            let init_deposit = parse_token(10);
+            let _ = mint!(client, psp22_mintable, Dave, init_deposit);
+            let _ = approve!(client, psp22_mintable, dave, vault_id, init_deposit);
+            let _ = client
+                .call(
+                    &ink_e2e::dave(),
+                    &vault.deposit(init_deposit, account_id(Dave)),
+                )
+                .submit()
+                .await
+                .expect("deposit failed");
+            let init_shares = balance_of!(client, vault, Dave);
+
+            let effective_assets = init_deposit + virtual_assets;
+            let effective_shares = init_shares + virtua_shares;
+
+            let expected_shares_amount = parse_share(1, offset);
+            let expected_token_amount =
+                expected_shares_amount * effective_assets / effective_shares + 1;
+
+            let _ = mint!(client, psp22_mintable, Alice, expected_token_amount);
+            let _ = approve!(
+                client,
+                psp22_mintable,
+                alice,
+                vault_id,
+                expected_token_amount
+            );
+            //end of before each
+
+            let preview_mint = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.preview_mint(expected_shares_amount),
+                )
+                .dry_run()
+                .await?
+                .return_value()
+                .unwrap();
+
+            assert_eq!(preview_mint, expected_token_amount);
+
+            let mint_res = client
+                .call(
+                    &ink_e2e::alice(),
+                    &vault.mint(expected_shares_amount, account_id(Bob)),
+                )
+                .submit()
+                .await?;
+
+            //verify
+
+            let contract_emitted_events = mint_res.contract_emitted_events()?;
+            let vault_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == vault.to_account_id()
+                })
+                .collect();
+            let psp22_events: Vec<_> = contract_emitted_events
+                .iter()
+                .filter(|event_with_topics| {
+                    event_with_topics.event.contract == psp22_mintable.to_account_id()
+                })
+                .collect();
+            assert_eq!(mint_res.return_value(), Ok(expected_token_amount));
+
+            assert_psp22_transfer_event(
+                &psp22_events[1].event,
+                Some(account_id(Alice)),
+                Some(vault.to_account_id()),
+                expected_token_amount,
+                psp22_mintable.to_account_id(),
+            );
+
+            // mint shares
+            assert_psp22_transfer_event(
+                &vault_events[0].event,
+                None,
+                Some(account_id(Bob)),
+                expected_shares_amount,
+                vault.to_account_id(),
+            );
+
+            assert_deposit_event(
+                &vault_events[1].event,
+                account_id(Alice),
+                account_id(Bob),
+                expected_token_amount,
+                expected_shares_amount,
+            );
+
+            assert_eq!(
+                balance_of2!(client, psp22_mintable, vault_id),
+                expected_token_amount + init_deposit
+            );
+            assert_eq!(balance_of2!(client, psp22_mintable, alice_id), 0);
+            assert_eq!(balance_of2!(client, vault, bob_id), expected_shares_amount);
         }
         Ok(())
     }

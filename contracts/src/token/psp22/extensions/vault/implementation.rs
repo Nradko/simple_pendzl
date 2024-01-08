@@ -5,7 +5,7 @@ use ink::ToAccountId;
 use pendzl::math::errors::MathError;
 use pendzl::traits::{Balance, DefaultEnv, Storage};
 
-use super::{Deposit, PSP22VaultInternal, PSP22VaultStorage};
+use super::{Deposit, PSP22VaultInternal, PSP22VaultStorage, Withdraw};
 use crate::token::psp22::implementation::Data as PSP22Data;
 use crate::token::psp22::{PSP22Error, PSP22};
 use crate::token::psp22::{PSP22Internal, PSP22Ref, PSP22Storage};
@@ -88,26 +88,19 @@ where
     }
 
     fn _convert_to_shares_default_impl(&self, assets: &Balance) -> Result<Balance, MathError> {
-        let ret_val = mul_div(
+        mul_div(
             *assets,
-            (self
-                ._total_supply()
-                .checked_add(1)
-                .ok_or(MathError::Overflow)?)
-            .checked_mul(10_u128.pow(self._decimals_offset() as u32))
-            .ok_or(MathError::Overflow)?,
+            self._total_supply()
+                .checked_add(
+                    10_u128
+                        .checked_pow(self._decimals_offset() as u32)
+                        .ok_or(MathError::Overflow)?,
+                )
+                .ok_or(MathError::Overflow)?,
             self._total_assets()
                 .checked_add(1)
                 .ok_or(MathError::Overflow)?,
-        )?;
-        ink::env::debug_println!(
-            "convert_to_shares_default_impl: assets: {}, decimals_offset: {}, ret_val: {}",
-            assets,
-            self._decimals_offset(),
-            ret_val
-        );
-
-        Ok(ret_val)
+        )
     }
 
     fn _convert_to_assets_default_impl(&self, shares: &Balance) -> Result<Balance, MathError> {
@@ -116,12 +109,9 @@ where
             self._total_assets()
                 .checked_add(1)
                 .ok_or(MathError::Overflow)?,
-            (self
-                ._total_supply()
-                .checked_add(1)
-                .ok_or(MathError::Overflow)?)
-            .checked_mul(10_u128.pow(self._decimals_offset() as u32))
-            .ok_or(MathError::Overflow)?,
+            self._total_supply()
+                .checked_add(10_u128.pow(self._decimals_offset() as u32))
+                .ok_or(MathError::Overflow)?,
         )
     }
 
@@ -145,9 +135,12 @@ where
     }
 
     fn _preview_mint_default_impl(&self, shares: &Balance) -> Result<Balance, MathError> {
-        self._convert_to_assets(&shares)?
-            .checked_add(1)
-            .ok_or(MathError::Overflow)
+        let x = self._convert_to_assets(&shares)?;
+        if x > 0 {
+            Ok(x.checked_add(1).ok_or(MathError::Overflow)?)
+        } else {
+            Ok(0)
+        }
     }
 
     fn _preview_withdraw_default_impl(&self, assets: &Balance) -> Result<Balance, MathError> {
@@ -155,9 +148,12 @@ where
     }
 
     fn _preview_redeem_default_impl(&self, shares: &Balance) -> Result<Balance, MathError> {
-        self._convert_to_assets(&shares)?
-            .checked_add(1)
-            .ok_or(MathError::Overflow)
+        let x = self._convert_to_assets(&shares)?;
+        if x > 0 {
+            Ok(x.checked_add(1).ok_or(MathError::Overflow)?)
+        } else {
+            Ok(0)
+        }
     }
 
     fn _deposit_default_impl(
@@ -167,6 +163,11 @@ where
         assets: &Balance,
         shares: &Balance,
     ) -> Result<(), PSP22Error> {
+        ink::env::debug_println!(
+            "deposit_default_impl: assets: {}, shares: {}",
+            assets,
+            shares
+        );
         self._asset().transfer_from(
             *caller,
             Self::env().account_id(),
@@ -200,6 +201,14 @@ where
         self._burn_from(owner, shares)?;
         self._asset()
             .transfer(*receiver, *assets, Vec::<u8>::new())?;
+
+        Self::env().emit_event(Withdraw {
+            sender: *caller,
+            receiver: *receiver,
+            owner: *owner,
+            assets: *assets,
+            shares: *shares,
+        });
         Ok(())
     }
 }
@@ -262,6 +271,11 @@ pub trait PSP22VaultDefaultImpl: PSP22VaultInternal + PSP22Internal + DefaultEnv
             return Err(PSP22Error::Custom("Vault: Max".to_string()));
         }
         let shares = self._preview_deposit(&assets)?;
+        ink::env::debug_println!(
+            "deposit_default_impl: assets: {}, shares: {}",
+            assets,
+            shares
+        );
         self._deposit(&Self::env().caller(), &receiver, &assets, &shares)?;
         Ok(shares)
     }
@@ -305,5 +319,15 @@ pub trait PSP22VaultDefaultImpl: PSP22VaultInternal + PSP22Internal + DefaultEnv
         let assets = self._preview_redeem(&shares)?;
         self._withdraw(&Self::env().caller(), &receiver, &owner, &assets, &shares)?;
         Ok(assets)
+    }
+}
+
+#[cfg(test)]
+pub mod test {
+    use super::*;
+    #[test]
+    fn test_mul_div() {
+        let x = 1_000_000_000_000_u128;
+        assert_eq!(mul_div(x, x, 2 * x), Ok(x / 2));
     }
 }
